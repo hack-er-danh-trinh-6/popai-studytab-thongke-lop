@@ -95,3 +95,12 @@ Cùng định dạng request/response với `/ai/advice` (`prompt`, `history`) n
 
 ## Nhạc tập trung (`GET /media/focus-music.mp3`)
 File nhạc nằm ở `media/focus-music.mp3`, phục vụ có hỗ trợ `Range` để app Android stream thay vì đóng gói trong APK.
+
+
+## Adminbot cohort mô phỏng
+
+Trang `/adminbot` dùng cùng đăng nhập admin hệ thống với `/sysadmin`; Render cần có `SYSTEM_ADMIN_PASSWORD` không rỗng. API nằm dưới `/api/admin/v1/adminbot/*` và yêu cầu bearer token admin. Cohort là trường `THPT Tây Đô`, lớp `11TN2`, giáo viên `Phan Quốc Huy`; provisioning bị từ chối nếu lớp đó đã tồn tại để không nhập dữ liệu giả vào lớp thật. Tài khoản dùng alias `teacher@adminbot.invalid` và `student01..38@adminbot.invalid` nên không nhận được email.
+
+Nút Provision tạo một giáo viên và 38 học sinh trong một transaction, đánh dấu tài khoản bằng `is_synthetic`, và tự tải CSV mật khẩu một lần; server chỉ lưu hash, không lưu mật khẩu rõ. Giáo viên đăng nhập qua `/admin` cần cả thông tin trong CSV và cổng `TEACHER_ADMIN_PASSWORD`. Lần Start đầu ghi một phiên mô phỏng/học sinh/ngày trong 7 ngày gần nhất; sau đó scheduler có thể ghi tối đa một phiên ngẫu nhiên mỗi 5 phút. `is_synthetic` được đặt trên mọi phiên do bot sinh. Trạng thái Start/Stop được lưu trong PostgreSQL; Stop chặn phát sinh mới, không xóa dữ liệu cũ. Migration `004_adminbot.sql` tự chạy cùng các migration còn lại lúc khởi động.
+
+Nếu lần tải CSV Provision bị mất hoặc lỗi, Adminbot có nút **Đặt lại mật khẩu & tải CSV**: thao tác này tạo bộ mật khẩu mới cho đúng 39 tài khoản synthetic, thu hồi các phiên đăng nhập hiện tại và tải CSV mới; toàn bộ mật khẩu cũ hết hiệu lực. Mọi tài khoản/phiên synthetic được loại khỏi thống kê tổng thể của `/sysadmin`; dữ liệu vẫn hiện trong thống kê riêng của lớp demo cho giáo viên.

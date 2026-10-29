@@ -211,7 +211,9 @@ function renderApp() {
   mount(
     h("div", { class: "topbar" },
       h("strong", { text: "POP AI · Admin hệ thống" }),
-      h("nav", { class: "tabs", "aria-label": "Chức năng" }, tab("timetable", "Thời khóa biểu"), tab("stats", "Thống kê")),
+      h("nav", { class: "tabs", "aria-label": "Chức năng" },
+        tab("timetable", "Thời khóa biểu"), tab("stats", "Thống kê"),
+        h("a", { class: "tab", href: "/adminbot", text: "Adminbot" })),
       h("button", { class: "ghost", text: "Đăng xuất", onclick: () => { if (state.view !== "timetable" || confirmDiscard()) logout(); } })),
     state.view === "stats"
       ? h("div", { class: "stats-page" }, renderStatsView())

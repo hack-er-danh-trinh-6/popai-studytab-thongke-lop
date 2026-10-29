@@ -32,7 +32,8 @@ export async function query(text, values = []) {
 const MIGRATIONS = [
   { version: "001_pop_mobile_api", file: "./migrations/001_pop_mobile_api.sql" },
   { version: "002_classroom", file: "./migrations/002_classroom.sql" },
-  { version: "003_timetable", file: "./migrations/003_timetable.sql" }
+  { version: "003_timetable", file: "./migrations/003_timetable.sql" },
+  { version: "004_adminbot", file: "./migrations/004_adminbot.sql" }
 ];
 
 export async function runMigrations() {
