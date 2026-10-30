@@ -71,7 +71,7 @@ export async function requireAuth(req, res, next) {
     const match = /^Bearer\s+([A-Za-z0-9_-]{40,})$/i.exec(header);
     if (!match) return res.status(401).json({ message: "Vui lòng đăng nhập để tiếp tục." });
     const result = await query(
-      `SELECT u.id, u.email, u.full_name, u.role, u.is_synthetic
+      `SELECT u.id, u.email, u.full_name, u.role
          FROM pop_sessions s
          JOIN pop_users u ON u.id = s.user_id
         WHERE s.access_token_hash = $1

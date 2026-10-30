@@ -8,17 +8,9 @@ import {
 import { loadSettings, saveSettings, schoolTimeZone, sendDailyTimetable } from "../timetableService.js";
 import { parseRange, parseUserListQuery } from "../statsDomain.js";
 import { listUsers, loadOverview, loadUserDetail } from "../statsService.js";
-import {
-  loadAdminbotState, provisionAdminbotCohort, rotateAdminbotCredentials, startAdminbot, stopAdminbot
-} from "../adminbot.js";
 
 // API của trang admin hệ thống (/sysadmin). Tách hoàn toàn khỏi API giáo viên: mật khẩu riêng SYSTEM_ADMIN_PASSWORD.
 const router = Router();
-router.use((_req, res, next) => {
-  res.setHeader("Cache-Control", "no-store, max-age=0");
-  res.setHeader("Pragma", "no-cache");
-  next();
-});
 
 const NOT_CONFIGURED = "Máy chủ chưa cấu hình mật khẩu admin hệ thống (SYSTEM_ADMIN_PASSWORD).";
 const tokenOptions = () => ({ secret: process.env.SYSTEM_ADMIN_SECRET });
@@ -36,13 +28,6 @@ const sendLimiter = rateLimit({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { message: "Bạn đã gửi quá nhiều thông báo trong một giờ. Vui lòng thử lại sau." }
-});
-const adminbotWriteLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 20,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  message: { message: "Quá nhiều thao tác Adminbot trong một giờ. Vui lòng thử lại sau." }
 });
 
 router.post("/login", loginLimiter, (req, res) => {
@@ -82,13 +67,12 @@ router.get("/classes", async (req, res, next) => {
     const keyword = nameKey(typeof req.query.q === "string" ? req.query.q.slice(0, 100) : "");
     const result = await query(
       `SELECT c.id, c.name, c.school_id, s.name AS school_name, t.full_name AS teacher_name,
-              (SELECT COUNT(*)::int FROM pop_class_members m JOIN pop_users u ON u.id = m.user_id
-                WHERE m.class_id = c.id AND m.status = 'APPROVED' AND u.is_synthetic = FALSE) AS student_count,
+              (SELECT COUNT(*)::int FROM pop_class_members m WHERE m.class_id = c.id AND m.status = 'APPROVED') AS student_count,
               (SELECT COUNT(*)::int FROM pop_timetable_entries e WHERE e.class_id = c.id) AS lesson_count
          FROM pop_classes c
          JOIN pop_schools s ON s.id = c.school_id
          JOIN pop_users t ON t.id = c.teacher_id
-        WHERE t.is_synthetic = FALSE AND ($1 = '' OR position($1 in c.name_key) > 0 OR position($1 in s.name_key) > 0)
+        WHERE $1 = '' OR position($1 in c.name_key) > 0 OR position($1 in s.name_key) > 0
         ORDER BY s.name, c.name
         LIMIT 500`,
       [keyword]
@@ -106,13 +90,12 @@ async function loadClass(req, res) {
   }
   const result = await query(
     `SELECT c.id, c.name, c.school_id, s.name AS school_name, t.full_name AS teacher_name,
-            (SELECT COUNT(*)::int FROM pop_class_members m JOIN pop_users u ON u.id = m.user_id
-              WHERE m.class_id = c.id AND m.status = 'APPROVED' AND u.is_synthetic = FALSE) AS student_count,
+            (SELECT COUNT(*)::int FROM pop_class_members m WHERE m.class_id = c.id AND m.status = 'APPROVED') AS student_count,
             (SELECT COUNT(*)::int FROM pop_timetable_entries e WHERE e.class_id = c.id) AS lesson_count
        FROM pop_classes c
        JOIN pop_schools s ON s.id = c.school_id
        JOIN pop_users t ON t.id = c.teacher_id
-      WHERE c.id = $1 AND t.is_synthetic = FALSE`,
+      WHERE c.id = $1`,
     [req.params.classId]
   );
   if (result.rowCount !== 1) {
@@ -255,48 +238,6 @@ router.get("/stats/users/:userId", async (req, res, next) => {
     const detail = await loadUserDetail(req.params.userId, schoolTimeZone());
     if (!detail) return res.status(404).json({ message: "Không tìm thấy người dùng." });
     return res.json(detail);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-// ---------- Cohort và dữ liệu mô phỏng Adminbot (system-admin only) ----------
-router.get("/adminbot/state", async (_req, res, next) => {
-  try {
-    return res.json(await loadAdminbotState());
-  } catch (error) {
-    return next(error);
-  }
-});
-
-router.post("/adminbot/provision", adminbotWriteLimiter, async (_req, res, next) => {
-  try {
-    const result = await provisionAdminbotCohort();
-    return res.status(result.created ? 201 : 200).json(result);
-  } catch (error) {
-    return next(error);
-  }
-});
-
-router.post("/adminbot/credentials/rotate", adminbotWriteLimiter, async (_req, res, next) => {
-  try {
-    return res.json(await rotateAdminbotCredentials());
-  } catch (error) {
-    return next(error);
-  }
-});
-
-router.post("/adminbot/start", adminbotWriteLimiter, async (_req, res, next) => {
-  try {
-    return res.json(await startAdminbot());
-  } catch (error) {
-    return next(error);
-  }
-});
-
-router.post("/adminbot/stop", adminbotWriteLimiter, async (_req, res, next) => {
-  try {
-    return res.json(await stopAdminbot());
   } catch (error) {
     return next(error);
   }

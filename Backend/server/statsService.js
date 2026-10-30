@@ -23,51 +23,51 @@ export async function loadOverview(days, timeZone) {
     journalTotals, journalPerDay, journalBuckets, journalDistractors,
     classroom, memberStatus, classes
   ] = await Promise.all([
-    query("SELECT role AS label, COUNT(*)::int AS count FROM pop_users WHERE is_synthetic = FALSE GROUP BY role ORDER BY count DESC"),
+    query("SELECT role AS label, COUNT(*)::int AS count FROM pop_users GROUP BY role ORDER BY count DESC"),
     query(
       `SELECT d.day::text AS day, COUNT(u.id)::int AS count
-         FROM (${SERIES}) d LEFT JOIN pop_users u ON u.is_synthetic = FALSE AND (u.created_at AT TIME ZONE $1)::date = d.day
+         FROM (${SERIES}) d LEFT JOIN pop_users u ON (u.created_at AT TIME ZONE $1)::date = d.day
         GROUP BY d.day ORDER BY d.day`, p),
     query(
       `WITH act AS (
-         SELECT user_id, (created_at AT TIME ZONE $1)::date AS day FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND ${FOCUS_IN_RANGE}
+         SELECT user_id, (created_at AT TIME ZONE $1)::date AS day FROM pop_focus_sessions WHERE ${FOCUS_IN_RANGE}
          UNION
-         SELECT user_id, (updated_at AT TIME ZONE $1)::date FROM pop_journals WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND (updated_at AT TIME ZONE $1)::date >= ${START}
+         SELECT user_id, (updated_at AT TIME ZONE $1)::date FROM pop_journals WHERE (updated_at AT TIME ZONE $1)::date >= ${START}
          UNION
-         SELECT user_id, (completed_at AT TIME ZONE $1)::date FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND (completed_at AT TIME ZONE $1)::date >= ${START}
+         SELECT user_id, (completed_at AT TIME ZONE $1)::date FROM pop_assessment_results WHERE (completed_at AT TIME ZONE $1)::date >= ${START}
        )
        SELECT d.day::text AS day, COUNT(DISTINCT a.user_id)::int AS count
          FROM (${SERIES}) d LEFT JOIN act a ON a.day = d.day
         GROUP BY d.day ORDER BY d.day`, p),
     query(
       `WITH act AS (
-         SELECT user_id, created_at AS at FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE)
-         UNION ALL SELECT user_id, updated_at FROM pop_journals WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE)
-         UNION ALL SELECT user_id, completed_at FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE)
+         SELECT user_id, created_at AS at FROM pop_focus_sessions
+         UNION ALL SELECT user_id, updated_at FROM pop_journals
+         UNION ALL SELECT user_id, completed_at FROM pop_assessment_results
        )
-       SELECT (SELECT COUNT(*) FROM pop_users WHERE is_synthetic = FALSE)::int AS total_users,
+       SELECT (SELECT COUNT(*) FROM pop_users)::int AS total_users,
               COUNT(DISTINCT user_id) FILTER (WHERE at >= NOW() - interval '1 day')::int AS active_1,
               COUNT(DISTINCT user_id) FILTER (WHERE at >= NOW() - interval '7 days')::int AS active_7,
               COUNT(DISTINCT user_id) FILTER (WHERE at >= NOW() - interval '30 days')::int AS active_30,
               COUNT(DISTINCT user_id)::int AS ever_active,
-              (SELECT COUNT(DISTINCT m.user_id) FROM pop_class_members m JOIN pop_users u ON u.id = m.user_id WHERE m.status = 'APPROVED' AND u.is_synthetic = FALSE)::int AS with_class,
-              (SELECT COUNT(DISTINCT user_id) FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE))::int AS with_assessment,
-              (SELECT COUNT(*) FROM pop_personal_plans WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE))::int AS with_plan,
-              (SELECT COUNT(DISTINCT user_id) FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE))::int AS with_focus,
-              (SELECT COUNT(DISTINCT user_id) FROM pop_journals WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE))::int AS with_journal
+              (SELECT COUNT(DISTINCT user_id) FROM pop_class_members WHERE status = 'APPROVED')::int AS with_class,
+              (SELECT COUNT(DISTINCT user_id) FROM pop_assessment_results)::int AS with_assessment,
+              (SELECT COUNT(*) FROM pop_personal_plans)::int AS with_plan,
+              (SELECT COUNT(DISTINCT user_id) FROM pop_focus_sessions)::int AS with_focus,
+              (SELECT COUNT(DISTINCT user_id) FROM pop_journals)::int AS with_journal
          FROM act`),
-    query("SELECT COUNT(*)::int AS total, COUNT(DISTINCT user_id)::int AS users FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE)"),
+    query("SELECT COUNT(*)::int AS total, COUNT(DISTINCT user_id)::int AS users FROM pop_assessment_results"),
     query(
       `SELECT d.day::text AS day, COUNT(r.id)::int AS count
-         FROM (${SERIES}) d LEFT JOIN pop_assessment_results r ON r.user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND (r.completed_at AT TIME ZONE $1)::date = d.day
+         FROM (${SERIES}) d LEFT JOIN pop_assessment_results r ON (r.completed_at AT TIME ZONE $1)::date = d.day
         GROUP BY d.day ORDER BY d.day`, p),
     query(
-      `WITH latest AS (SELECT DISTINCT ON (user_id) scores FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) ORDER BY user_id, completed_at DESC)
+      `WITH latest AS (SELECT DISTINCT ON (user_id) scores FROM pop_assessment_results ORDER BY user_id, completed_at DESC)
        SELECT g.code AS label, ROUND(AVG((latest.scores->>g.code)::numeric), 2) AS avg
          FROM latest CROSS JOIN (VALUES ('VN'), ('PT'), ('PB'), ('TT')) g(code)
         WHERE latest.scores ->> g.code IS NOT NULL GROUP BY g.code`),
     query(
-      `WITH latest AS (SELECT DISTINCT ON (user_id) scores FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) ORDER BY user_id, completed_at DESC)
+      `WITH latest AS (SELECT DISTINCT ON (user_id) scores FROM pop_assessment_results ORDER BY user_id, completed_at DESC)
        SELECT g.code AS grp,
               LEAST(5, GREATEST(1, ROUND((latest.scores->>g.code)::numeric)))::int AS bucket, COUNT(*)::int AS count
          FROM latest CROSS JOIN (VALUES ('VN'), ('PT'), ('PB'), ('TT')) g(code)
@@ -75,99 +75,95 @@ export async function loadOverview(days, timeZone) {
     query(
       `SELECT COUNT(*)::int AS total,
               COALESCE(ROUND(AVG((plan->>'dailyShortVideoLimitMinutes')::numeric)), 0)::int AS avg_limit
-         FROM pop_personal_plans WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE)` ),
-    query("SELECT plan->>'sessionDurationMinutes' AS bucket, COUNT(*)::int AS count FROM pop_personal_plans WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) GROUP BY 1"),
-    query("SELECT plan->>'targetDays' AS bucket, COUNT(*)::int AS count FROM pop_personal_plans WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) GROUP BY 1"),
+         FROM pop_personal_plans`),
+    query("SELECT plan->>'sessionDurationMinutes' AS bucket, COUNT(*)::int AS count FROM pop_personal_plans GROUP BY 1"),
+    query("SELECT plan->>'targetDays' AS bucket, COUNT(*)::int AS count FROM pop_personal_plans GROUP BY 1"),
     query(
       `SELECT CASE WHEN lim <= 30 THEN '0-30' WHEN lim <= 60 THEN '31-60' WHEN lim <= 120 THEN '61-120' ELSE '>120' END AS bucket,
               COUNT(*)::int AS count
-         FROM (SELECT (plan->>'dailyShortVideoLimitMinutes')::int AS lim FROM pop_personal_plans WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE)) t GROUP BY 1`),
+         FROM (SELECT (plan->>'dailyShortVideoLimitMinutes')::int AS lim FROM pop_personal_plans) t GROUP BY 1`),
     query(
       `SELECT MIN(trim(p)) AS label, COUNT(*)::int AS count
          FROM pop_personal_plans,
               jsonb_array_elements_text(CASE WHEN jsonb_typeof(plan->'trackedPlatforms') = 'array' THEN plan->'trackedPlatforms' ELSE '[]'::jsonb END) p
-        WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND trim(p) <> '' GROUP BY lower(trim(p)) ORDER BY count DESC, label LIMIT 8`),
-    query(`SELECT status AS label, COUNT(*)::int AS count FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND ${FOCUS_IN_RANGE} GROUP BY status`, p),
+        WHERE trim(p) <> '' GROUP BY lower(trim(p)) ORDER BY count DESC, label LIMIT 8`),
+    query(`SELECT status AS label, COUNT(*)::int AS count FROM pop_focus_sessions WHERE ${FOCUS_IN_RANGE} GROUP BY status`, p),
     query(
       `SELECT COUNT(DISTINCT user_id)::int AS users, COUNT(*)::int AS sessions,
               COALESCE(SUM(actual_minutes) FILTER (WHERE status = 'COMPLETED'), 0)::int AS minutes,
               COALESCE(SUM(interruption_count), 0)::int AS interruptions,
               COALESCE(ROUND(AVG(LEAST(actual_minutes::numeric / target_minutes, 1) * 100) FILTER (WHERE status = 'COMPLETED')), 0)::int AS completion_rate,
               ROUND(AVG(self_rating) FILTER (WHERE self_rating > 0), 2) AS avg_rating
-         FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND ${FOCUS_IN_RANGE}`, p),
+         FROM pop_focus_sessions WHERE ${FOCUS_IN_RANGE}`, p),
     query(
       `SELECT d.day::text AS day,
               COUNT(f.id) FILTER (WHERE f.status = 'COMPLETED')::int AS completed,
               COALESCE(SUM(f.actual_minutes) FILTER (WHERE f.status = 'COMPLETED'), 0)::int AS minutes
-         FROM (${SERIES}) d LEFT JOIN pop_focus_sessions f ON f.is_synthetic = FALSE AND f.user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND (f.created_at AT TIME ZONE $1)::date = d.day
+         FROM (${SERIES}) d LEFT JOIN pop_focus_sessions f ON (f.created_at AT TIME ZONE $1)::date = d.day
         GROUP BY d.day ORDER BY d.day`, p),
     query(
       `SELECT EXTRACT(HOUR FROM created_at AT TIME ZONE $1)::int AS bucket, COUNT(*)::int AS count
-         FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND ${FOCUS_IN_RANGE} GROUP BY 1`, p),
+         FROM pop_focus_sessions WHERE ${FOCUS_IN_RANGE} GROUP BY 1`, p),
     query(
       `SELECT self_rating AS bucket, COUNT(*)::int AS count FROM pop_focus_sessions
-        WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND self_rating > 0 AND ${FOCUS_IN_RANGE} GROUP BY 1`, p),
+        WHERE self_rating > 0 AND ${FOCUS_IN_RANGE} GROUP BY 1`, p),
     query(
       `SELECT MIN(trim(r)) AS label, COUNT(*)::int AS count
          FROM pop_focus_sessions,
               jsonb_array_elements_text(CASE WHEN jsonb_typeof(interruption_reasons) = 'array' THEN interruption_reasons ELSE '[]'::jsonb END) r
-        WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND ${FOCUS_IN_RANGE} AND trim(r) <> '' GROUP BY lower(trim(r)) ORDER BY count DESC, label LIMIT 8`, p),
+        WHERE ${FOCUS_IN_RANGE} AND trim(r) <> '' GROUP BY lower(trim(r)) ORDER BY count DESC, label LIMIT 8`, p),
     query(
       `SELECT target_minutes AS bucket, COUNT(*)::int AS count FROM pop_focus_sessions
-        WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND ${FOCUS_IN_RANGE} GROUP BY 1`, p),
+        WHERE ${FOCUS_IN_RANGE} GROUP BY 1`, p),
     query(
       `SELECT COUNT(DISTINCT user_id)::int AS users, COUNT(*)::int AS entries,
               ROUND(AVG(estimated_short_video_minutes))::int AS avg_video,
               ROUND(AVG(focus_minutes))::int AS avg_focus,
               ROUND(AVG(interruption_count), 1) AS avg_interruptions
-         FROM pop_journals WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND entry_date >= ${START}`, p),
+         FROM pop_journals WHERE entry_date >= ${START}`, p),
     query(
       `SELECT d.day::text AS day, COUNT(j.id)::int AS entries,
               COALESCE(ROUND(AVG(j.estimated_short_video_minutes)), 0)::int AS avg_video,
               COALESCE(ROUND(AVG(j.focus_minutes)), 0)::int AS avg_focus
-         FROM (${SERIES}) d LEFT JOIN pop_journals j ON j.user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND j.entry_date = d.day
+         FROM (${SERIES}) d LEFT JOIN pop_journals j ON j.entry_date = d.day
         GROUP BY d.day ORDER BY d.day`, p),
     query(
       `SELECT CASE WHEN estimated_short_video_minutes <= 30 THEN '0-30' WHEN estimated_short_video_minutes <= 60 THEN '31-60'
                    WHEN estimated_short_video_minutes <= 120 THEN '61-120' WHEN estimated_short_video_minutes <= 180 THEN '121-180'
                    ELSE '>180' END AS bucket, COUNT(*)::int AS count
-         FROM pop_journals WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND entry_date >= ${START} GROUP BY 1`, p),
+         FROM pop_journals WHERE entry_date >= ${START} GROUP BY 1`, p),
     query(
       `SELECT MIN(trim(x)) AS label, COUNT(*)::int AS count
          FROM pop_journals,
               jsonb_array_elements_text(CASE WHEN jsonb_typeof(distractors) = 'array' THEN distractors ELSE '[]'::jsonb END) x
-        WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) AND entry_date >= ${START} AND trim(x) <> '' GROUP BY lower(trim(x)) ORDER BY count DESC, label LIMIT 8`, p),
+        WHERE entry_date >= ${START} AND trim(x) <> '' GROUP BY lower(trim(x)) ORDER BY count DESC, label LIMIT 8`, p),
     query(
-      `SELECT (SELECT COUNT(*) FROM pop_schools s WHERE s.created_by IS NULL OR s.created_by IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE))::int AS schools,
-              (SELECT COUNT(*) FROM pop_classes c JOIN pop_users t ON t.id = c.teacher_id WHERE t.is_synthetic = FALSE)::int AS classes,
-              (SELECT COUNT(DISTINCT e.class_id) FROM pop_timetable_entries e JOIN pop_classes c ON c.id = e.class_id JOIN pop_users t ON t.id = c.teacher_id WHERE t.is_synthetic = FALSE)::int AS classes_with_timetable,
-              (SELECT COUNT(*) FROM pop_notifications n JOIN pop_classes c ON c.id = n.class_id JOIN pop_users t ON t.id = c.teacher_id WHERE t.is_synthetic = FALSE)::int AS notifications,
-              (SELECT COUNT(*) FROM pop_notification_recipients r JOIN pop_notifications n ON n.id = r.notification_id JOIN pop_classes c ON c.id = n.class_id JOIN pop_users t ON t.id = c.teacher_id WHERE t.is_synthetic = FALSE)::int AS recipients,
-              (SELECT COUNT(*) FROM pop_notification_recipients r JOIN pop_notifications n ON n.id = r.notification_id JOIN pop_classes c ON c.id = n.class_id JOIN pop_users t ON t.id = c.teacher_id WHERE t.is_synthetic = FALSE AND r.delivered_at IS NOT NULL)::int AS delivered,
-              (SELECT COUNT(*) FROM pop_notification_recipients r JOIN pop_notifications n ON n.id = r.notification_id JOIN pop_classes c ON c.id = n.class_id JOIN pop_users t ON t.id = c.teacher_id WHERE t.is_synthetic = FALSE AND r.read_at IS NOT NULL)::int AS read,
-              (SELECT COUNT(*) FROM pop_users u WHERE u.role = 'STUDENT' AND u.is_synthetic = FALSE
+      `SELECT (SELECT COUNT(*) FROM pop_schools)::int AS schools,
+              (SELECT COUNT(*) FROM pop_classes)::int AS classes,
+              (SELECT COUNT(DISTINCT class_id) FROM pop_timetable_entries)::int AS classes_with_timetable,
+              (SELECT COUNT(*) FROM pop_notifications)::int AS notifications,
+              (SELECT COUNT(*) FROM pop_notification_recipients)::int AS recipients,
+              (SELECT COUNT(*) FROM pop_notification_recipients WHERE delivered_at IS NOT NULL)::int AS delivered,
+              (SELECT COUNT(*) FROM pop_notification_recipients WHERE read_at IS NOT NULL)::int AS read,
+              (SELECT COUNT(*) FROM pop_users u WHERE u.role = 'STUDENT'
                   AND NOT EXISTS (SELECT 1 FROM pop_class_members m WHERE m.user_id = u.id AND m.status = 'APPROVED'))::int AS students_without_class`),
-    query("SELECT m.status AS label, COUNT(*)::int AS count FROM pop_class_members m JOIN pop_users u ON u.id = m.user_id WHERE u.is_synthetic = FALSE GROUP BY m.status"),
+    query("SELECT status AS label, COUNT(*)::int AS count FROM pop_class_members GROUP BY status"),
     query(
       `SELECT c.id, c.name, s.name AS school_name, t.full_name AS teacher_name,
-              (SELECT COUNT(*)::int FROM pop_class_members m JOIN pop_users u ON u.id = m.user_id AND u.is_synthetic = FALSE WHERE m.class_id = c.id AND m.status = 'APPROVED') AS students,
-              (SELECT COUNT(*)::int FROM pop_class_members m JOIN pop_users u ON u.id = m.user_id AND u.is_synthetic = FALSE WHERE m.class_id = c.id AND m.status = 'PENDING') AS pending,
+              (SELECT COUNT(*)::int FROM pop_class_members m WHERE m.class_id = c.id AND m.status = 'APPROVED') AS students,
+              (SELECT COUNT(*)::int FROM pop_class_members m WHERE m.class_id = c.id AND m.status = 'PENDING') AS pending,
               (SELECT COUNT(DISTINCT f.user_id)::int FROM pop_focus_sessions f
                  JOIN pop_class_members m ON m.user_id = f.user_id AND m.class_id = c.id AND m.status = 'APPROVED'
-                 JOIN pop_users u ON u.id = f.user_id AND u.is_synthetic = FALSE
-                WHERE f.is_synthetic = FALSE AND (f.created_at AT TIME ZONE $1)::date >= ${START}) AS active_students,
+                WHERE (f.created_at AT TIME ZONE $1)::date >= ${START}) AS active_students,
               (SELECT COALESCE(SUM(f.actual_minutes), 0)::int FROM pop_focus_sessions f
                  JOIN pop_class_members m ON m.user_id = f.user_id AND m.class_id = c.id AND m.status = 'APPROVED'
-                 JOIN pop_users u ON u.id = f.user_id AND u.is_synthetic = FALSE
-                WHERE f.is_synthetic = FALSE AND f.status = 'COMPLETED' AND (f.created_at AT TIME ZONE $1)::date >= ${START}) AS focus_minutes,
+                WHERE f.status = 'COMPLETED' AND (f.created_at AT TIME ZONE $1)::date >= ${START}) AS focus_minutes,
               (SELECT ROUND(AVG(j.estimated_short_video_minutes))::int FROM pop_journals j
                  JOIN pop_class_members m ON m.user_id = j.user_id AND m.class_id = c.id AND m.status = 'APPROVED'
-                 JOIN pop_users u ON u.id = j.user_id AND u.is_synthetic = FALSE
                 WHERE j.entry_date >= ${START}) AS avg_video
          FROM pop_classes c
          JOIN pop_schools s ON s.id = c.school_id
          JOIN pop_users t ON t.id = c.teacher_id
-        WHERE t.is_synthetic = FALSE
         ORDER BY students DESC, s.name, c.name LIMIT 200`, p)
   ]);
 
@@ -271,12 +267,12 @@ const USER_SELECT = `
     SELECT user_id, COUNT(*)::int AS sessions, COUNT(*) FILTER (WHERE status = 'COMPLETED')::int AS completed,
            COALESCE(SUM(actual_minutes) FILTER (WHERE status = 'COMPLETED'), 0)::int AS minutes,
            COALESCE(SUM(interruption_count), 0)::int AS interruptions, MAX(created_at) AS last_at
-      FROM pop_focus_sessions WHERE is_synthetic = FALSE AND user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) GROUP BY user_id),
+      FROM pop_focus_sessions GROUP BY user_id),
   j AS (
     SELECT user_id, COUNT(*)::int AS days, ROUND(AVG(estimated_short_video_minutes))::int AS avg_video, MAX(updated_at) AS last_at
-      FROM pop_journals WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) GROUP BY user_id),
-  a AS (SELECT user_id, COUNT(*)::int AS cnt, MAX(completed_at) AS last_at FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) GROUP BY user_id),
-  la AS (SELECT DISTINCT ON (user_id) user_id, scores FROM pop_assessment_results WHERE user_id IN (SELECT id FROM pop_users WHERE is_synthetic = FALSE) ORDER BY user_id, completed_at DESC)
+      FROM pop_journals GROUP BY user_id),
+  a AS (SELECT user_id, COUNT(*)::int AS cnt, MAX(completed_at) AS last_at FROM pop_assessment_results GROUP BY user_id),
+  la AS (SELECT DISTINCT ON (user_id) user_id, scores FROM pop_assessment_results ORDER BY user_id, completed_at DESC)
   SELECT u.id, u.email, u.full_name, u.role, u.created_at,
          c.name AS class_name, s.name AS school_name,
          COALESCE(f.sessions, 0) AS focus_sessions, COALESCE(f.completed, 0) AS completed_sessions,
@@ -327,7 +323,7 @@ export async function listUsers(options) {
   const pattern = `%${escapeLike(search)}%`;
   const result = await query(
     `${USER_SELECT}
-      WHERE u.is_synthetic = FALSE AND ($1 = '' OR u.full_name ILIKE $2 OR u.email ILIKE $2) AND ($3 = '' OR u.role = $3)
+      WHERE ($1 = '' OR u.full_name ILIKE $2 OR u.email ILIKE $2) AND ($3 = '' OR u.role = $3)
       ORDER BY ${column} ${direction} NULLS LAST, u.id
       LIMIT $4 OFFSET $5`,
     [search, pattern, role, pageSize, offset]
@@ -336,7 +332,7 @@ export async function listUsers(options) {
 }
 
 export async function loadUserDetail(userId, timeZone) {
-  const found = await query(`${USER_SELECT} WHERE u.id = $1 AND u.is_synthetic = FALSE`, [userId]);
+  const found = await query(`${USER_SELECT} WHERE u.id = $1`, [userId]);
   if (found.rowCount !== 1) return null;
   const p = [timeZone, 30];
   const [assessments, focusDays, journalDays, plan, statuses] = await Promise.all([
@@ -344,7 +340,7 @@ export async function loadUserDetail(userId, timeZone) {
     query(
       `SELECT d.day::text AS day, COALESCE(SUM(f.actual_minutes) FILTER (WHERE f.status = 'COMPLETED'), 0)::int AS minutes
          FROM (${SERIES}) d
-         LEFT JOIN pop_focus_sessions f ON f.user_id = $3 AND f.is_synthetic = FALSE AND (f.created_at AT TIME ZONE $1)::date = d.day
+         LEFT JOIN pop_focus_sessions f ON f.user_id = $3 AND (f.created_at AT TIME ZONE $1)::date = d.day
         GROUP BY d.day ORDER BY d.day`, [...p, userId]),
     query(
       `SELECT d.day::text AS day, j.estimated_short_video_minutes AS video, j.focus_minutes AS focus
@@ -354,7 +350,7 @@ export async function loadUserDetail(userId, timeZone) {
       `SELECT plan->'dailyShortVideoLimitMinutes' AS limit_minutes, plan->'sessionDurationMinutes' AS session_minutes,
               plan->'targetDays' AS target_days, plan->'trackedPlatforms' AS platforms, updated_at
          FROM pop_personal_plans WHERE user_id = $1`, [userId]),
-    query("SELECT status AS label, COUNT(*)::int AS count FROM pop_focus_sessions WHERE user_id = $1 AND is_synthetic = FALSE GROUP BY status", [userId])
+    query("SELECT status AS label, COUNT(*)::int AS count FROM pop_focus_sessions WHERE user_id = $1 GROUP BY status", [userId])
   ]);
   const planRow = plan.rows[0];
   return {

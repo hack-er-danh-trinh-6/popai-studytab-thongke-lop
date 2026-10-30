@@ -145,8 +145,8 @@ router.post("/focus/session", async (req, res, next) => {
     await query(
       `INSERT INTO pop_focus_sessions
         (id, user_id, client_session_id, task_name, target_minutes, actual_minutes,
-         interruption_count, interruption_reasons, self_rating, status, is_synthetic)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11)
+         interruption_count, interruption_reasons, self_rating, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10)
        ON CONFLICT (user_id, client_session_id) DO UPDATE SET
          task_name = EXCLUDED.task_name,
          target_minutes = EXCLUDED.target_minutes,
@@ -154,11 +154,10 @@ router.post("/focus/session", async (req, res, next) => {
          interruption_count = EXCLUDED.interruption_count,
          interruption_reasons = EXCLUDED.interruption_reasons,
          self_rating = EXCLUDED.self_rating,
-         status = EXCLUDED.status,
-         is_synthetic = EXCLUDED.is_synthetic`,
+         status = EXCLUDED.status`,
       [randomUUID(), req.user.id, clientSessionId, session.taskName.trim(), session.targetMinutes,
         session.actualMinutes, session.interruptionCount, JSON.stringify(session.interruptionReasons),
-        session.selfRating, session.status, Boolean(req.user.is_synthetic)]
+        session.selfRating, session.status]
     );
     return res.status(204).end();
   } catch (error) {

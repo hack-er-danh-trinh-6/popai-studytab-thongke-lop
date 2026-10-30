@@ -21,4 +21,5 @@ Backend/node_modules/
 .DS_Store
 *.log
 
+# Local runtime secrets
 env.txt

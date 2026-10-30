@@ -7,7 +7,7 @@ import classroomRoutes from "./routes/classroom.js";
 import teacherRoutes from "./routes/teacher.js";
 import sysadminRoutes from "./routes/sysadmin.js";
 import { startTimetableScheduler } from "./timetableService.js";
-import { startAdminbotScheduler } from "./adminbot.js";
+import { startKeepAlive } from "./keepAlive.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -15,9 +15,8 @@ const routeManifestPath = fileURLToPath(new URL("../public/manus-routes.json", i
 const mediaDir = fileURLToPath(new URL("../media", import.meta.url));
 const adminDir = fileURLToPath(new URL("../public/admin", import.meta.url));
 const sysadminDir = fileURLToPath(new URL("../public/sysadmin", import.meta.url));
-const adminbotDir = fileURLToPath(new URL("../public/adminbot", import.meta.url));
 let stopScheduler = () => {};
-let stopAdminbotScheduler = () => {};
+let stopKeepAlive = () => {};
 let schemaReady = false;
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -69,17 +68,6 @@ app.use("/sysadmin", (_req, res, next) => {
   next();
 }, express.static(sysadminDir, { index: "index.html", dotfiles: "ignore" }));
 
-// Bảng điều khiển Adminbot: trang không chứa dữ liệu riêng; mọi API cần system-admin bearer token.
-app.use("/adminbot", (_req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; " +
-    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
-  );
-  res.setHeader("Referrer-Policy", "no-referrer");
-  next();
-}, express.static(adminbotDir, { index: "index.html", dotfiles: "ignore" }));
-
 const requireSchema = (_req, res, next) => {
   if (!schemaReady) return res.status(503).json({ message: "Máy chủ đang khởi động. Vui lòng thử lại." });
   return next();
@@ -112,6 +100,7 @@ app.use((error, req, res, _next) => {
 
 const server = app.listen(port, "0.0.0.0", () => {
   console.log(`POP AI API listening on port ${port}`);
+  stopKeepAlive = startKeepAlive();
 });
 
 runMigrations()
@@ -119,7 +108,6 @@ runMigrations()
     schemaReady = true;
     console.log("POP AI API database schema ready");
     stopScheduler = startTimetableScheduler();
-    stopAdminbotScheduler = startAdminbotScheduler();
   })
   .catch(async (error) => {
     console.error("startup_migration_failed", { code: error?.code ?? "database_migration_error" });
@@ -131,7 +119,7 @@ runMigrations()
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
     stopScheduler();
-    stopAdminbotScheduler();
+    stopKeepAlive();
     server.close(async () => {
       await pool.end().catch(() => {});
       process.exit(0);
