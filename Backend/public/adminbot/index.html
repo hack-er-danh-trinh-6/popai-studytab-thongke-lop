@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>POP AI · Adminbot</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <h1>POP AI · Adminbot</h1>
+        <p class="sub">Xem tài khoản bot và sinh dữ liệu học tập giả để kiểm thử app.</p>
+      </div>
+      <button id="logout" class="ghost" hidden>Đăng xuất</button>
+    </header>
+
+    <section id="gate" class="card gate">
+      <h2>Nhập mật khẩu admin</h2>
+      <p class="hint">Mật khẩu lấy từ biến môi trường <code>ADMINBOT_PASSWORD</code> (hoặc <code>TEACHER_ADMIN_PASSWORD</code>).</p>
+      <form id="gate-form" class="row">
+        <input id="gate-password" type="password" autocomplete="current-password" placeholder="Mật khẩu admin" required>
+        <button type="submit">Vào trang</button>
+      </form>
+      <p id="gate-error" class="error" hidden></p>
+    </section>
+
+    <div id="panel" hidden>
+      <section class="card">
+        <div class="class-head">
+          <div>
+            <h2 id="class-title">Lớp</h2>
+            <p id="class-sub" class="sub"></p>
+          </div>
+          <div class="state-box">
+            <span id="state-badge" class="badge">Đang dừng</span>
+            <button id="toggle-state" class="ghost small">Bắt đầu</button>
+          </div>
+        </div>
+        <p id="state-meta" class="hint"></p>
+      </section>
+
+      <section class="card">
+        <h2>Tạo dữ liệu giả</h2>
+        <p class="hint">Dữ liệu sinh ra gắn vào đúng 38 tài khoản học sinh bot trong lớp này, nên sẽ hiện trên app Android (Tập trung, Nhật ký, Tiến độ) và trên trang giáo viên <code>/admin</code>.</p>
+        <form id="seed-form" class="grid">
+          <label>Số ngày gần đây
+            <input id="opt-days" type="number" min="1" max="90" value="14">
+          </label>
+          <label>Số phiên tập trung tối đa mỗi ngày
+            <input id="opt-sessions" type="number" min="0" max="6" value="2">
+          </label>
+          <label>Tỉ lệ ngày có hoạt động (%)
+            <input id="opt-rate" type="number" min="0" max="100" value="75">
+          </label>
+          <label>Số bài tự đánh giá mỗi học sinh
+            <input id="opt-assessments" type="number" min="0" max="5" value="1">
+          </label>
+          <label class="check"><input id="opt-journals" type="checkbox" checked> Tạo nhật ký hằng ngày</label>
+          <label class="check"><input id="opt-plans" type="checkbox" checked> Tạo kế hoạch cá nhân</label>
+          <label class="check"><input id="opt-reset" type="checkbox" checked> Xoá dữ liệu bot cũ trước khi tạo</label>
+          <label class="check"><input id="opt-align" type="checkbox" checked> Lùi ngày vào lớp của học sinh bot (để thống kê lớp có dữ liệu)</label>
+        </form>
+        <div class="actions">
+          <button id="seed" class="primary">Tạo dữ liệu giả</button>
+          <button id="reset" class="danger">Xoá dữ liệu bot</button>
+          <button id="reload" class="ghost">Tải lại</button>
+        </div>
+        <p id="status" class="status" hidden></p>
+      </section>
+
+      <section class="cards" id="totals"></section>
+
+      <section class="card">
+        <h2>Học sinh bot <span id="student-count" class="pill"></span></h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Họ tên</th><th>Email</th>
+                <th class="num">Phiên</th><th class="num">Hoàn thành</th>
+                <th class="num">Phút tập trung</th><th class="num">Nhật ký</th>
+                <th class="num">Tự đánh giá</th><th>Kế hoạch</th><th>Hoạt động gần nhất</th>
+              </tr>
+            </thead>
+            <tbody id="students"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

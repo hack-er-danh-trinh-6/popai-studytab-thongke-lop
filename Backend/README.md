@@ -90,6 +90,24 @@ Lưu ý: câu hỏi/câu trả lời POP-AI hiện không được lưu trong c�
 
 `POST /api/mobile/v1/ai/advice` nhận thêm trường tuỳ chọn `history`: mảng `{ "role": "user" | "assistant", "content": string }`. Server chỉ nhận hai role đó (bỏ `system` và mọi giá trị khác), gỡ ký tự `<` `>`, cắt mỗi lượt còn 600 ký tự và giữ 6 lượt gần nhất, rồi đưa vào khối dữ liệu `<hoi_thoai_truoc>` của tin nhắn người dùng (không tạo lượt assistant giả). Không gửi `history` thì hành vi như cũ.
 
+## Adminbot — dữ liệu học tập thử nghiệm
+
+Trang quản trị bot tại `/adminbot` dùng để xem học sinh bot trong lớp bot và sinh dữ liệu mẫu vào các bảng hoạt động của app. Trang cần `ADMINBOT_PASSWORD`; nếu biến này chưa được đặt, có thể dùng lại `TEACHER_ADMIN_PASSWORD`. Có thể đặt riêng `ADMINBOT_SECRET`; nếu bỏ trống, phiên ký dùng lại `TEACHER_GATE_SECRET` hoặc khoá suy ra từ mật khẩu. Nên đặt mật khẩu/secret riêng trong môi trường production.
+
+API tại `/api/adminbot/v1`:
+
+- `POST /gate` — xác thực mật khẩu adminbot, trả token hết hạn.
+- `GET /overview` — trả giáo viên/lớp bot, danh sách học sinh `is_synthetic = true` đã duyệt, tổng phiên tập trung, nhật ký, đánh giá, kế hoạch.
+- `POST /seed` — sinh phiên tập trung, nhật ký, đánh giá tự theo dõi và kế hoạch cá nhân; tuỳ chọn số ngày (1–90), phiên/ngày (0–6), tỉ lệ ngày hoạt động, số bài đánh giá (0–5), bật/tắt nhật ký/kế hoạch, xoá dữ liệu bot cũ trước khi tạo, và lùi ngày duyệt vào lớp để thống kê trang `/admin` tính được dữ liệu.
+- `POST /reset` — xoá dữ liệu hoạt động cá nhân của tài khoản bot trong lớp bot, không xoá tài khoản/lớp.
+- `POST /state` — cập nhật cờ is_running trong `pop_adminbot_state`.
+
+Các route yêu cầu `X-Gate-Token`. Lệnh sinh/xoá chỉ giới hạn vào học sinh `is_synthetic = true` trong lớp bot được lưu tại `pop_adminbot_state`; không đụng dữ liệu học sinh thật. Phiên tập trung có client session ID ổn định theo học sinh/ngày, các lần chạy có thể dùng tuỳ chọn xoá trước khi sinh lại. Trang tạo dữ liệu mặc định 14 ngày, tối đa 2 phiên/ngày, 75% ngày có hoạt động, 1 bài đánh giá/học sinh và có nhật ký/kế hoạch. Dữ liệu tự đánh giá chỉ để kiểm thử, không phải chẩn đoán y khoa.
+
+**Triển khai:** đưa toàn bộ thư mục `Backend/` lên môi trường backend đang phục vụ POP AI, chạy `pnpm install --frozen-lockfile`, đặt các biến môi trường hiện có cùng `ADMINBOT_PASSWORD` (hoặc `TEACHER_ADMIN_PASSWORD`), sau đó khởi động `pnpm start`. Migration `004_adminbot.sql` phải hiện diện và `pop_adminbot_state` cần trỏ tới giáo viên/lớp bot. Mở `<BASE_URL>/adminbot` để thao tác. Kiểm tra bằng `pnpm run check` và `pnpm test`.
+
+## Ngữ cảnh hội thoại cho POP-AI
+
 ## AI Giáo sư bài tập (`POST /ai/homework`)
 Cùng định dạng request/response với `/ai/advice` (`prompt`, `history`) nhưng dùng prompt gia sư (`HOMEWORK_SYSTEM_PROMPT`): giải thích từng bước, văn bản thuần, `actionableSteps` luôn rỗng. Không đưa nhật ký hay số liệu hoạt động của người dùng vào prompt. Giới hạn riêng 20 lượt/15 phút/tài khoản.
 
