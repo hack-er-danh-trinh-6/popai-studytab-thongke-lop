@@ -225,7 +225,7 @@ function renderSettings() {
   const enabled = h("input", { type: "checkbox", checked: state.settings.enabled });
   return h("section", { class: "card" },
     h("h2", { text: "Thông báo hằng ngày" }),
-    h("p", { class: "muted small", text: `Tự động gửi các môn học của ngày hôm đó tới điện thoại học sinh trong lớp (Thứ 2 - Thứ 6, múi giờ ${state.settings.timeZone}).` }),
+    h("p", { class: "muted small", text: `Tự động gửi thời khóa biểu của ngày kế tiếp vào 19:30 ngày hôm trước (múi giờ ${state.settings.timeZone}).` }),
     h("label", { for: "sendTime", text: "Giờ gửi" }), time,
     h("label", { class: "check" }, enabled, "Bật gửi tự động"),
     h("div", { class: "actions" },

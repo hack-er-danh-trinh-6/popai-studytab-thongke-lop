@@ -174,7 +174,7 @@ const SEND_MESSAGES = {
   NO_STUDENTS: "Lớp chưa có học sinh nào được duyệt để nhận thông báo."
 };
 
-// Gửi ngay thông báo của hôm nay (hoặc của một ngày Thứ 2-6 chọn trước) tới học sinh lớp: dùng để thử hoặc gửi bù.
+// Gửi ngay thông báo của một ngày Thứ 2-6 chọn trước tới học sinh lớp: dùng để thử hoặc gửi bù.
 router.post("/classes/:classId/timetable/send-now", sendLimiter, async (req, res, next) => {
   try {
     const klass = await loadClass(req, res);

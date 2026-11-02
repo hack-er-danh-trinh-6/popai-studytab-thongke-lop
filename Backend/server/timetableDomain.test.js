@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  ADMIN_TTL_MS, buildDailyMessage, isWithinSendWindow, issueAdminToken, localClock,
+  ADMIN_TTL_MS, buildDailyMessage, isWithinSendWindow, issueAdminToken, localClock, nextTimetableDay,
   validateSettings, validateTimetable, verifyAdminToken
 } from "./timetableDomain.js";
 import { issueGateToken, verifyGateToken } from "./classroomDomain.js";
@@ -73,14 +73,20 @@ test("localClock theo múi giờ Việt Nam (UTC+7), qua nửa đêm UTC", () =>
   assert.equal(localClock(new Date("2026-10-20T17:05:00Z"), "Asia/Ho_Chi_Minh").minutes, 5);
 });
 
-test("isWithinSendWindow: chỉ Thứ 2-6, sau giờ gửi và trong cửa sổ bù", () => {
+test("nextTimetableDay: gửi trước ngày học kế tiếp, Chủ nhật gửi cho Thứ 2", () => {
+  assert.deepEqual(nextTimetableDay({ date: "2026-10-21", weekday: 4 }), { date: "2026-10-22", weekday: 5 });
+  assert.deepEqual(nextTimetableDay({ date: "2026-10-25", weekday: 8 }), { date: "2026-10-26", weekday: 2 });
+  assert.equal(nextTimetableDay({ date: "2026-10-23", weekday: 6 }), null);
+  assert.equal(nextTimetableDay({ date: "2026-10-24", weekday: 7 }), null);
+});
+test("isWithinSendWindow: 19:30 ngày trước ngày học và cửa sổ bù", () => {
   const at = (weekday, hhmm) => ({ date: "2026-10-21", weekday, minutes: Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3)) });
-  assert.equal(isWithinSendWindow(at(4, "05:59"), "06:00"), false);
-  assert.equal(isWithinSendWindow(at(4, "06:00"), "06:00"), true);
-  assert.equal(isWithinSendWindow(at(4, "09:59"), "06:00"), true);
-  assert.equal(isWithinSendWindow(at(4, "10:00"), "06:00"), false);
-  assert.equal(isWithinSendWindow(at(7, "06:30"), "06:00"), false);
-  assert.equal(isWithinSendWindow(at(8, "06:30"), "06:00"), false);
+  assert.equal(isWithinSendWindow(at(4, "19:29"), "19:30"), false);
+  assert.equal(isWithinSendWindow(at(4, "19:30"), "19:30"), true);
+  assert.equal(isWithinSendWindow(at(4, "23:29"), "19:30"), true);
+  assert.equal(isWithinSendWindow(at(4, "23:30"), "19:30"), false);
+  assert.equal(isWithinSendWindow(at(6, "19:30"), "19:30"), false);
+  assert.equal(isWithinSendWindow(at(8, "19:30"), "19:30"), true);
 });
 
 test("token admin: hợp lệ, hết hạn, sai mật khẩu và không dùng lẫn với cổng giáo viên", () => {

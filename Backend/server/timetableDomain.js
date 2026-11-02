@@ -102,17 +102,26 @@ export function localClock(now, timeZone) {
   };
 }
 
+/** Trả ngày học kế tiếp cần gửi trước một ngày; Chủ nhật gửi cho Thứ 2. */
+export function nextTimetableDay(clock) {
+  const nextWeekday = { 2: 3, 3: 4, 4: 5, 5: 6, 8: 2 }[clock.weekday];
+  if (!nextWeekday) return null;
+  const nextDate = new Date(`${clock.date}T00:00:00Z`);
+  nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+  return { date: nextDate.toISOString().slice(0, 10), weekday: nextWeekday };
+}
+
 export const sendTimeToMinutes = (sendTime) => {
   const [hour, minute] = sendTime.split(":").map(Number);
   return hour * 60 + minute;
 };
 
-/** Hệ thống chỉ gửi bù trong khoảng này sau giờ gửi (ví dụ máy chủ khởi động lại muộn), tránh gửi "chào buổi sáng" lúc nửa đêm. */
+/** Hệ thống chỉ gửi bù trong khoảng này sau giờ gửi (ví dụ máy chủ khởi động lại muộn). */
 export const CATCH_UP_WINDOW_MINUTES = 4 * 60;
 
-/** Có nên gửi thông báo tự động ở thời điểm này không (chưa xét lớp đã gửi hôm nay hay chưa). */
+/** Có nên gửi lịch của ngày kế tiếp ở thời điểm này không (chưa xét lớp đã gửi hay chưa). */
 export function isWithinSendWindow(clock, sendTime) {
-  if (!WEEKDAYS.includes(clock.weekday)) return false;
+  if (!nextTimetableDay(clock)) return false;
   const start = sendTimeToMinutes(sendTime);
   return clock.minutes >= start && clock.minutes < start + CATCH_UP_WINDOW_MINUTES;
 }

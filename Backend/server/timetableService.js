@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { pool, query } from "./db.js";
 import { validateTimeZone } from "./classroomDomain.js";
-import { buildDailyMessage, isWithinSendWindow, localClock } from "./timetableDomain.js";
+import { buildDailyMessage, isWithinSendWindow, localClock, nextTimetableDay } from "./timetableDomain.js";
 
 const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh";
+const DEFAULT_SEND_TIME = "19:30";
 const TICK_MS = 60 * 1000;
 
 /** Múi giờ của trường (biến TIMETABLE_TIME_ZONE, mặc định Asia/Ho_Chi_Minh). */
@@ -13,7 +14,7 @@ export function schoolTimeZone() {
 
 export async function loadSettings() {
   const result = await query("SELECT send_time, enabled FROM pop_timetable_settings WHERE id = 1");
-  const row = result.rows[0] ?? { send_time: "06:00", enabled: true };
+  const row = result.rows[0] ?? { send_time: DEFAULT_SEND_TIME, enabled: true };
   return { sendTime: row.send_time, enabled: row.enabled };
 }
 
@@ -94,12 +95,13 @@ export async function sendDailyTimetable(classId, { date, weekday, force = false
   }
 }
 
-/** Một lượt kiểm tra của bộ lập lịch: gửi cho mọi lớp có tiết học hôm nay mà chưa được gửi. */
+/** Một lượt kiểm tra: lúc 19:30 gửi cho mọi lớp có tiết học ngày kế tiếp. */
 export async function runDailyDispatch(now = new Date()) {
   const settings = await loadSettings();
   if (!settings.enabled) return { sent: 0 };
   const clock = localClock(now, schoolTimeZone());
   if (!isWithinSendWindow(clock, settings.sendTime)) return { sent: 0 };
+  const target = nextTimetableDay(clock);
 
   const pending = await query(
     `SELECT DISTINCT e.class_id
@@ -108,12 +110,12 @@ export async function runDailyDispatch(now = new Date()) {
         AND NOT EXISTS (
           SELECT 1 FROM pop_timetable_dispatches d WHERE d.class_id = e.class_id AND d.send_date = $2::date
         )`,
-    [clock.weekday, clock.date]
+    [target.weekday, target.date]
   );
   let sent = 0;
   for (const row of pending.rows) {
     try {
-      const result = await sendDailyTimetable(row.class_id, { date: clock.date, weekday: clock.weekday });
+      const result = await sendDailyTimetable(row.class_id, { date: target.date, weekday: target.weekday });
       if (result.status === "SENT") sent += 1;
     } catch (error) {
       // Lỗi một lớp không chặn các lớp khác; lượt sau sẽ thử lại vì lớp đó chưa được ghi nhận đã gửi.

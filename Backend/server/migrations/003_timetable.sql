@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS pop_timetable_entries (
 -- Cấu hình chung (một dòng duy nhất): giờ gửi thông báo mỗi ngày và bật/tắt.
 CREATE TABLE IF NOT EXISTS pop_timetable_settings (
     id SMALLINT PRIMARY KEY CHECK (id = 1),
-    send_time TEXT NOT NULL DEFAULT '06:00' CHECK (send_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+    send_time TEXT NOT NULL DEFAULT '19:30' CHECK (send_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
