@@ -43,6 +43,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -56,6 +58,7 @@ import com.health.pop.data.repository.FocusRepository
 import com.health.pop.data.repository.JournalRepository
 import com.health.pop.data.repository.PlanRepository
 import com.health.pop.domain.model.AiMode
+import com.health.pop.domain.model.AssessmentPhase
 import com.health.pop.data.repository.ProgressRepository
 import com.health.pop.ui.ai.AIViewModel
 import com.health.pop.ui.ai.POPAIChatScreen
@@ -427,11 +430,12 @@ fun AppNavHost(
                     }
                     composable(Screen.Prevention.route) {
                         val vm = popViewModel { PreventionViewModel(assessmentRepository) }
-                        PreventionScreen(viewModel = vm, onStartAssessment = { navController.navigate(Screen.Assessment.route) })
+                        PreventionScreen(viewModel = vm, onStartAssessment = { phase -> navController.navigate("assessment/${phase.code}") })
                     }
-                    composable(Screen.Assessment.route) {
-                        val vm = popViewModel { PreventionViewModel(assessmentRepository) }
-                        AssessmentScreen(viewModel = vm, onSubmitted = { navController.navigate(Screen.AssessmentResult.route) })
+                    composable(Screen.Assessment.route, arguments = listOf(navArgument("phase") { type = NavType.StringType })) { entry ->
+                        val phase = runCatching { AssessmentPhase.valueOf(entry.arguments?.getString("phase").orEmpty()) }.getOrDefault(AssessmentPhase.PRE)
+                        val vm = popViewModel { PreventionViewModel(assessmentRepository, phase) }
+                        AssessmentScreen(viewModel = vm, phase = phase, onSubmitted = { navController.navigate(Screen.AssessmentResult.route) })
                     }
                     composable(Screen.AssessmentResult.route) {
                         val vm = popViewModel { PreventionViewModel(assessmentRepository) }

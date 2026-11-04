@@ -24,18 +24,25 @@ export function formatJournalDate(isoDate) {
   return `${day}/${month}/${year}`;
 }
 
-export function scoreAssessment(answers) {
-  if (!Array.isArray(answers) || answers.length !== 20) {
-    throw new Error("Vui lòng gửi đủ 20 câu trả lời.");
+export const SURVEY_PHASES = { PRE: "PRE", POST: "POST" };
+export const SURVEY_GROUPS = ["VN", "PT", "PB", "TT"];
+
+export function scoreSurvey(phase, answers) {
+  const isPost = phase === SURVEY_PHASES.POST;
+  const expectedCount = isPost ? 25 : 20;
+  if (!Array.isArray(answers) || answers.length !== expectedCount) {
+    throw new Error(`Vui lòng gửi đủ ${expectedCount} câu trả lời.`);
   }
   const seen = new Set();
-  const groups = { VN: [], PT: [], PB: [], TT: [] };
+  const groups = { VN: [], PT: [], PB: [], TT: [], ...(isPost ? { DG: [] } : {}) };
   for (const answer of answers) {
     const questionId = answer?.questionId;
     const score = Number(answer?.score);
     if (
       typeof questionId !== "string" ||
-      !/^(VN|PT|PB|TT)[1-5]$/.test(questionId) ||
+      !/^(VN|PT|PB|TT|DG)[1-5]$/.test(questionId) ||
+      (!isPost && questionId.startsWith("DG")) ||
+      (isPost && !questionId.startsWith("DG") && !SURVEY_GROUPS.some((group) => questionId.startsWith(group))) ||
       !Number.isInteger(score) || score < 1 || score > 5 ||
       seen.has(questionId)
     ) throw new Error("Câu trả lời không hợp lệ.");
@@ -51,6 +58,10 @@ export function scoreAssessment(answers) {
       Math.round((values.reduce((sum, value) => sum + value, 0) / values.length) * 10) / 10
     ])
   );
+}
+
+export function scoreAssessment(answers) {
+  return scoreSurvey(SURVEY_PHASES.PRE, answers);
 }
 
 /** Một phiên tập trung hoàn thành dài từ ngần này phút trở lên sẽ được tính 1 streak cho ngày đó. */

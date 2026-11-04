@@ -1,37 +1,42 @@
 package com.health.pop.data.local
 
 import com.health.pop.domain.model.AssessmentGroup
+import com.health.pop.domain.model.AssessmentPhase
 import com.health.pop.domain.model.AssessmentQuestion
 
 object MockDataProvider {
-    // Bộ câu hỏi là nội dung tĩnh của sản phẩm; không chứa hồ sơ hoặc kết quả người dùng mẫu.
-    val assessmentQuestions: List<AssessmentQuestion> = listOf(
-        // VN: Thói quen xem video ngắn
-        AssessmentQuestion("VN1", AssessmentGroup.VN, "Bạn có hay lướt xem video ngắn (TikTok/Reels/Shorts) khi nghỉ giải lao?"),
-        AssessmentQuestion("VN2", AssessmentGroup.VN, "Bạn có thường xuyên quẹt chuyển video chỉ sau 3-5 giây đầu tiên?"),
-        AssessmentQuestion("VN3", AssessmentGroup.VN, "Bạn có cảm thấy khó dừng lướt video dù đã đến giờ vào học hoặc đi ngủ?"),
-        AssessmentQuestion("VN4", AssessmentGroup.VN, "Bạn có lướt video ngắn trong lúc ăn uống, đi lại hoặc chờ xe?"),
-        AssessmentQuestion("VN5", AssessmentGroup.VN, "Sau khi lướt video ngắn 20 phút, bạn cảm thấy đầu óc mệt mỏi nhưng vẫn khó buông máy?"),
-
-        // PT: Phụ thuộc thiết bị số
-        AssessmentQuestion("PT1", AssessmentGroup.PT, "Bạn có thói quen cầm điện thoại lên ngay lập tức khi không có việc gì làm?"),
-        AssessmentQuestion("PT2", AssessmentGroup.PT, "Bạn có cảm thấy bồn chồn nếu không mang theo điện thoại bên mình?"),
-        AssessmentQuestion("PT3", AssessmentGroup.PT, "Bạn có kiểm tra màn hình điện thoại liên tục dù không có chuông báo?"),
-        AssessmentQuestion("PT4", AssessmentGroup.PT, "Màn hình đầu tiên bạn nhìn thấy sau khi thức dậy là điện thoại?"),
-        AssessmentQuestion("PT5", AssessmentGroup.PT, "Bạn cảm thấy khó chịu khi môi trường xung quanh không có mạng internet?"),
-
-        // PB: Biểu hiện phân mảnh chú ý
-        AssessmentQuestion("PB1", AssessmentGroup.PB, "Bạn có thấy khó đọc hết một trang sách/bài đọc dài mà không bị xao nhãng?"),
-        AssessmentQuestion("PB2", AssessmentGroup.PB, "Khi đang học bài, suy nghĩ của bạn có hay nhảy sang các chủ đề khác?"),
-        AssessmentQuestion("PB3", AssessmentGroup.PB, "Bạn có thấy sốt ruột khi phải suy nghĩ giải một bài tập đòi hỏi nhiều bước?"),
-        AssessmentQuestion("PB4", AssessmentGroup.PB, "Bạn có hay mở điện thoại để làm một việc rồi quên mất và lướt ứng dụng khác?"),
-        AssessmentQuestion("PB5", AssessmentGroup.PB, "Bạn cảm thấy sự kiên nhẫn của mình giảm đi so với trước đây?"),
-
-        // TT: Khả năng tập trung sâu
-        AssessmentQuestion("TT1", AssessmentGroup.TT, "Bạn có thể duy trì học tập 25 phút liên tục mà không đụng vào điện thoại?"),
-        AssessmentQuestion("TT2", AssessmentGroup.TT, "Khi gặp bài tập khó, bạn sẵn sàng kiên trì tìm cách tự suy nghĩ giải quyết?"),
-        AssessmentQuestion("TT3", AssessmentGroup.TT, "Bạn có thói quen chủ động sắp xếp thứ tự ưu tiên cho bài học trong ngày?"),
-        AssessmentQuestion("TT4", AssessmentGroup.TT, "Bạn cảm thấy hài lòng khi hoàn thành trọn vẹn một khoảng thời gian học tập?"),
-        AssessmentQuestion("TT5", AssessmentGroup.TT, "Bạn chủ động cất điện thoại ra xa tầm tay trước khi bắt đầu ngồi học?")
+    // Bám sát 3.PHIẾUKHẢO SÁT.docx: PRE có 20 câu; POST có 20 câu VN/PT/PB/TT và 5 câu DG.
+    private val common = listOf(
+        AssessmentQuestion("VN1", AssessmentGroup.VN, "Tôi thường xuyên xem TikTok, Reels hoặc Shorts mỗi ngày."),
+        AssessmentQuestion("VN2", AssessmentGroup.VN, "Tôi có thói quen xem liên tục nhiều video ngắn trong một lần sử dụng."),
+        AssessmentQuestion("VN3", AssessmentGroup.VN, "Tôi thường mở các ứng dụng video ngắn khi cảm thấy rảnh rỗi."),
+        AssessmentQuestion("VN4", AssessmentGroup.VN, "Tôi ưu tiên xem video ngắn hơn đọc các bài viết hoặc tài liệu dài."),
+        AssessmentQuestion("VN5", AssessmentGroup.VN, "Tôi khó dừng lại khi đang xem các video ngắn."),
+        AssessmentQuestion("PT1", AssessmentGroup.PT, "Tôi thường xuyên kiểm tra điện thoại ngay cả khi không có thông báo mới."),
+        AssessmentQuestion("PT2", AssessmentGroup.PT, "Tôi cảm thấy khó chịu khi không có điện thoại hoặc Internet bên cạnh."),
+        AssessmentQuestion("PT3", AssessmentGroup.PT, "Tôi thường sử dụng điện thoại trong lúc học tập hoặc làm bài tập."),
+        AssessmentQuestion("PT4", AssessmentGroup.PT, "Tôi có thói quen chuyển qua lại giữa nhiều ứng dụng trong thời gian ngắn."),
+        AssessmentQuestion("PT5", AssessmentGroup.PT, "Tôi cảm thấy buồn chán khi không sử dụng thiết bị số."),
+        AssessmentQuestion("PB1", AssessmentGroup.PB, "Tôi dễ bị phân tâm khi học tập hoặc thực hiện nhiệm vụ quan trọng."),
+        AssessmentQuestion("PB2", AssessmentGroup.PB, "Tôi thường mất kiên nhẫn khi phải đọc hoặc xem nội dung dài."),
+        AssessmentQuestion("PB3", AssessmentGroup.PB, "Tôi khó duy trì sự tập trung vào một việc trong thời gian dài."),
+        AssessmentQuestion("PB4", AssessmentGroup.PB, "Tôi thường chuyển sang hoạt động khác khi cảm thấy nội dung không đủ hấp dẫn."),
+        AssessmentQuestion("PB5", AssessmentGroup.PB, "Tôi cảm thấy bồn chồn khi không được truy cập mạng xã hội hoặc video ngắn."),
+        AssessmentQuestion("TT1", AssessmentGroup.TT, "Tôi có thể tập trung học tập liên tục từ 30 phút trở lên mà không bị phân tâm."),
+        AssessmentQuestion("TT2", AssessmentGroup.TT, "Tôi có thể hoàn thành nhiệm vụ học tập mà không cần kiểm tra điện thoại."),
+        AssessmentQuestion("TT3", AssessmentGroup.TT, "Tôi duy trì được sự chú ý khi đọc tài liệu hoặc sách có nội dung dài."),
+        AssessmentQuestion("TT4", AssessmentGroup.TT, "Tôi có thể tập trung vào một nhiệm vụ cho đến khi hoàn thành."),
+        AssessmentQuestion("TT5", AssessmentGroup.TT, "Tôi chủ động kiểm soát các yếu tố gây xao nhãng trong quá trình học tập.")
     )
+
+    private val dg = listOf(
+        AssessmentQuestion("DG1", AssessmentGroup.DG, "Mô hình P.O.P giúp tôi hiểu rõ hơn về hội chứng Popcorn Brain."),
+        AssessmentQuestion("DG2", AssessmentGroup.DG, "Các hoạt động của mô hình giúp tôi giảm thời gian sử dụng video ngắn không cần thiết."),
+        AssessmentQuestion("DG3", AssessmentGroup.DG, "Trợ lý ảo POP-AI hỗ trợ tôi theo dõi và cải thiện khả năng tập trung sâu."),
+        AssessmentQuestion("DG4", AssessmentGroup.DG, "Tôi nhận thấy khả năng tập trung của mình được cải thiện sau quá trình tham gia dự án."),
+        AssessmentQuestion("DG5", AssessmentGroup.DG, "Tôi mong muốn tiếp tục áp dụng mô hình P.O.P và sử dụng POP-AI trong thời gian tới.")
+    )
+
+    fun questions(phase: AssessmentPhase): List<AssessmentQuestion> = if (phase == AssessmentPhase.POST) common + dg else common
+    val assessmentQuestions: List<AssessmentQuestion> = questions(AssessmentPhase.PRE)
 }

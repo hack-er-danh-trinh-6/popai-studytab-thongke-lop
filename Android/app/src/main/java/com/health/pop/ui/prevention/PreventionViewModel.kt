@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.health.pop.core.network.ApiResult
 import com.health.pop.data.repository.AssessmentRepository
 import com.health.pop.domain.model.AssessmentQuestion
+import com.health.pop.domain.model.AssessmentPhase
 import com.health.pop.domain.model.AssessmentResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,9 +19,9 @@ sealed class AssessmentSubmissionState {
     data class Error(val message: String) : AssessmentSubmissionState()
 }
 
-class PreventionViewModel(private val repository: AssessmentRepository) : ViewModel() {
+class PreventionViewModel(private val repository: AssessmentRepository, val phase: AssessmentPhase = AssessmentPhase.PRE) : ViewModel() {
 
-    val questions: List<AssessmentQuestion> = repository.getQuestions()
+    val questions: List<AssessmentQuestion> = repository.getQuestions(phase)
     private val _answers = MutableStateFlow<MutableMap<String, Int>>(mutableMapOf())
     val answers: StateFlow<Map<String, Int>> = _answers.asStateFlow()
     private val _submissionState = MutableStateFlow<AssessmentSubmissionState>(
@@ -30,6 +31,10 @@ class PreventionViewModel(private val repository: AssessmentRepository) : ViewMo
     val submissionState: StateFlow<AssessmentSubmissionState> = _submissionState.asStateFlow()
     private val _historyState = MutableStateFlow<List<AssessmentResult>>(emptyList())
     val historyState: StateFlow<List<AssessmentResult>> = _historyState.asStateFlow()
+    private val _profile = MutableStateFlow<Map<String, String>>(emptyMap())
+    val profile: StateFlow<Map<String, String>> = _profile.asStateFlow()
+    private val _openAnswers = MutableStateFlow<Map<String, String>>(emptyMap())
+    val openAnswers: StateFlow<Map<String, String>> = _openAnswers.asStateFlow()
 
     init {
         loadHistory()
@@ -50,14 +55,17 @@ class PreventionViewModel(private val repository: AssessmentRepository) : ViewMo
         _answers.value = updated
     }
 
+    fun setProfile(key: String, value: String) { _profile.value = _profile.value + (key to value) }
+    fun setOpenAnswer(key: String, value: String) { _openAnswers.value = _openAnswers.value + (key to value) }
+
     fun submitAssessment() {
         if (_answers.value.size < questions.size) {
-            _submissionState.value = AssessmentSubmissionState.Error("Vui lòng trả lời đủ 20 câu hỏi trước khi gửi.")
+            _submissionState.value = AssessmentSubmissionState.Error("Vui lòng trả lời đủ ${questions.size} câu hỏi trước khi gửi.")
             return
         }
         _submissionState.value = AssessmentSubmissionState.Submitting
         viewModelScope.launch {
-            when (val result = repository.submitAssessment(_answers.value)) {
+            when (val result = repository.submitAssessment(phase, _answers.value, _profile.value, _openAnswers.value)) {
                 is ApiResult.Success -> {
                     _submissionState.value = AssessmentSubmissionState.Success(result.data, result.isDemoData)
                     loadHistory()

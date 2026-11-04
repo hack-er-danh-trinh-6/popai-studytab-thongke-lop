@@ -368,3 +368,32 @@ export async function loadUserDetail(userId, timeZone) {
     } : null
   };
 }
+
+export async function loadSurveyOverview() {
+  const result = await query(
+    `SELECT a.id, a.user_id, u.full_name, u.email, u.role, a.phase, a.completed_at,
+            a.answers, a.scores, a.profile, a.open_answers, c.name AS class_name, s.name AS school_name
+       FROM pop_assessment_results a
+       JOIN pop_users u ON u.id = a.user_id
+       LEFT JOIN pop_class_members m ON m.user_id = u.id AND m.status = 'APPROVED'
+       LEFT JOIN pop_classes c ON c.id = m.class_id
+       LEFT JOIN pop_schools s ON s.id = c.school_id
+      ORDER BY a.completed_at DESC
+      LIMIT 10000`
+  );
+  const groups = ["VN", "PT", "PB", "TT", "DG"];
+  const averages = (phase) => Object.fromEntries(groups.map((group) => {
+    const values = result.rows.filter((row) => row.phase === phase).map((row) => Number(row.scores?.[group])).filter(Number.isFinite);
+    return [group, values.length ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2)) : null];
+  }));
+  return {
+    total: result.rowCount,
+    phases: { PRE: result.rows.filter((row) => row.phase === "PRE").length, POST: result.rows.filter((row) => row.phase === "POST").length },
+    averages: { PRE: averages("PRE"), POST: averages("POST") },
+    records: result.rows.map((row) => ({
+      id: row.id, userId: row.user_id, fullName: row.full_name, email: row.email, role: row.role,
+      phase: row.phase, completedAt: row.completed_at, className: row.class_name, schoolName: row.school_name,
+      answers: row.answers, scores: row.scores, profile: row.profile, openAnswers: row.open_answers
+    }))
+  };
+}

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { query } from "../db.js";
-import { FOCUS_STREAK_MINUTES, computeStreak, formatJournalDate, parseJournalDate, scoreAssessment } from "../domain.js";
+import { FOCUS_STREAK_MINUTES, computeStreak, formatJournalDate, parseJournalDate, scoreSurvey, SURVEY_PHASES } from "../domain.js";
 import { buildReflectionContext, requestAdvice } from "../ai.js";
 import { loadActivityContext, loadJournalForDate, resolveTimeZone } from "../aiContext.js";
 import { requireAuth } from "../security.js";
@@ -32,29 +32,48 @@ const validStringArray = (value, maxItems = 20, maxLength = 200) =>
   Array.isArray(value) && value.length <= maxItems &&
   value.every((entry) => typeof entry === "string" && entry.trim().length <= maxLength);
 
+const validPhase = (phase) => phase === SURVEY_PHASES.PRE || phase === SURVEY_PHASES.POST;
+const cleanJsonObject = (value, maxKeys = 20, maxValueLength = 1000) => {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = Object.entries(value);
+  if (entries.length > maxKeys) return null;
+  const result = {};
+  for (const [key, raw] of entries) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,40}$/.test(key) || typeof raw !== "string" || raw.length > maxValueLength) return null;
+    result[key] = raw.trim();
+  }
+  return result;
+};
+
 router.post("/assessment/submit", async (req, res, next) => {
   try {
+    const phase = req.body?.phase ?? SURVEY_PHASES.PRE;
+    if (!validPhase(phase)) return res.status(400).json({ message: "Đợt khảo sát không hợp lệ." });
     let scores;
     try {
-      scores = scoreAssessment(req.body?.answers);
+      scores = scoreSurvey(phase, req.body?.answers);
     } catch (error) {
       return res.status(400).json({ message: error.message });
     }
+    const profile = cleanJsonObject(req.body?.profile, 12, 100);
+    const openAnswers = cleanJsonObject(req.body?.openAnswers, 6, 2000);
+    if (profile === null || openAnswers === null) return res.status(400).json({ message: "Thông tin khảo sát không hợp lệ." });
     const id = randomUUID();
     const answers = req.body.answers.map(({ questionId, score }) => ({ questionId, score }));
-    const note = "Chỉ để tự theo dõi, không phải chẩn đoán";
+    const note = phase === SURVEY_PHASES.POST
+      ? "Phiếu sau thực nghiệm · phục vụ nghiên cứu, không phải chẩn đoán"
+      : "Phiếu trước thực nghiệm · phục vụ nghiên cứu, không phải chẩn đoán";
     const inserted = await query(
-      `INSERT INTO pop_assessment_results (id, user_id, answers, scores, note)
-       VALUES ($1, $2, $3::jsonb, $4::jsonb, $5)
-       RETURNING id, completed_at, scores, note`,
-      [id, req.user.id, JSON.stringify(answers), JSON.stringify(scores), note]
+      `INSERT INTO pop_assessment_results (id, user_id, phase, answers, scores, profile, open_answers, note)
+       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8)
+       RETURNING id, completed_at, phase, scores, profile, open_answers, note`,
+      [id, req.user.id, phase, JSON.stringify(answers), JSON.stringify(scores), JSON.stringify(profile), JSON.stringify(openAnswers), note]
     );
     const row = inserted.rows[0];
     return res.status(201).json({
-      id: row.id,
-      completedAt: row.completed_at.toISOString(),
-      scores: row.scores,
-      note: row.note
+      id: row.id, completedAt: row.completed_at.toISOString(), phase: row.phase,
+      scores: row.scores, profile: row.profile, openAnswers: row.open_answers, note: row.note
     });
   } catch (error) {
     return next(error);
@@ -64,7 +83,7 @@ router.post("/assessment/submit", async (req, res, next) => {
 router.get("/assessment/history", async (req, res, next) => {
   try {
     const result = await query(
-      `SELECT id, completed_at, scores, note
+      `SELECT id, completed_at, phase, scores, profile, open_answers, note
          FROM pop_assessment_results
         WHERE user_id = $1
         ORDER BY completed_at DESC
@@ -72,10 +91,8 @@ router.get("/assessment/history", async (req, res, next) => {
       [req.user.id]
     );
     return res.json(result.rows.map((row) => ({
-      id: row.id,
-      completedAt: row.completed_at.toISOString(),
-      scores: row.scores,
-      note: row.note
+      id: row.id, completedAt: row.completed_at.toISOString(), phase: row.phase ?? SURVEY_PHASES.PRE,
+      scores: row.scores, profile: row.profile ?? {}, openAnswers: row.open_answers ?? {}, note: row.note
     })));
   } catch (error) {
     return next(error);

@@ -23,6 +23,7 @@ const state = {
   requests: [],
   students: null,
   analytics: null,
+  surveyAnalytics: null,
   selectedStudentId: null,
   studentDetail: null,
   history: []
@@ -98,7 +99,7 @@ async function api(path, { method = "GET", body, gate = false, auth = true } = {
 }
 
 function clearSession({ keepGate = false } = {}) {
-  state.token = null; state.user = null; state.classes = []; state.students = null; state.analytics = null;
+  state.token = null; state.user = null; state.classes = []; state.students = null; state.analytics = null; state.surveyAnalytics = null;
   store.remove("pop_token");
   if (!keepGate) {
     state.gateToken = null; state.gateExpiresAt = 0;
@@ -236,6 +237,8 @@ async function loadTab() {
         if (state.selectedStudentId) await loadStudentDetail(state.selectedStudentId, false);
       } else if (state.tab === "analytics") {
         state.analytics = await api(`/classes/${klass.id}/analytics?days=${state.days}&timeZone=${encodeURIComponent(TIME_ZONE)}`);
+      } else if (state.tab === "survey") {
+        state.surveyAnalytics = await api(`/classes/${klass.id}/assessment-analytics`);
       } else if (state.tab === "notifications") {
         const [history, students] = await Promise.all([
           api(`/classes/${klass.id}/notifications`),
@@ -313,10 +316,12 @@ function renderDashboard() {
         h("div", { class: "tabs", role: "tablist" },
           tabButton("requests", "Duyệt học sinh", klass.pendingCount),
           tabButton("analytics", "Thống kê lớp"),
+          tabButton("survey", "Khảo sát"),
           tabButton("students", "Thói quen tập trung"),
           tabButton("notifications", "Thông báo")),
         state.tab === "requests" ? renderRequests(klass)
           : state.tab === "analytics" ? renderAnalytics(klass)
+            : state.tab === "survey" ? renderSurveyAnalytics()
             : state.tab === "students" ? renderStudents(klass)
               : renderNotifications(klass)));
   } else {
@@ -504,6 +509,29 @@ function renderAnalytics(klass) {
     h("div", { class: "grid2" }, hourCard, levelCard),
     h("div", { class: "grid2" }, ratingCard, top),
     attention);
+}
+
+// ----- tab: khảo sát trước/sau thực nghiệm -----
+function renderSurveyAnalytics() {
+  const data = state.surveyAnalytics;
+  if (!data) return h("div", { class: "empty", text: "Đang tải dữ liệu khảo sát…" });
+  const groups = ["VN", "PT", "PB", "TT", "DG"];
+  const score = (phase, group) => data.averages?.[phase]?.[group];
+  const chart = h("div", { class: "bars", "aria-label": "So sánh điểm khảo sát trước và sau" }, groups.map((g) =>
+    h("div", { class: "bar-col", title: `${g} · trước ${score("PRE", g) ?? "—"} · sau ${score("POST", g) ?? "—"}` },
+      h("span", { text: `${score("PRE", g) ?? "—"}/${score("POST", g) ?? "—"}` }),
+      h("div", { class: "bar-pair" },
+        h("div", { class: "bar", style: `height:${Math.round((Number(score("PRE", g) || 0) / 5) * 100)}px; background:#8bb8ff` }),
+        h("div", { class: "bar", style: `height:${Math.round((Number(score("POST", g) || 0) / 5) * 100)}px; background:#44c49a` })),
+      h("span", { text: g }))));
+  const rows = data.students.map((s) => h("tr", {},
+    h("td", {}, h("strong", { text: s.fullName }), h("div", { class: "muted small", text: s.email })),
+    ...groups.map((g) => h("td", { text: `${s.phases?.PRE?.scores?.[g] ?? "—"} / ${s.phases?.POST?.scores?.[g] ?? "—"}` }))));
+  return h("div", {},
+    h("p", { class: "muted small", text: "Điểm theo đúng các nhóm trong phiếu; định dạng là Trước / Sau. DG chỉ có ở phiếu sau thực nghiệm." }),
+    h("div", { class: "card inner" }, h("h3", { text: "Biểu đồ điểm trung bình trước và sau" }), chart,
+      h("p", { class: "muted small", text: "Xanh nhạt: trước · Xanh lá: sau" })),
+    h("div", { class: "table-wrap" }, h("table", {}, h("thead", {}, h("tr", {}, ["Học sinh", ...groups].map((x) => h("th", { text: x })) )), h("tbody", {}, rows))));
 }
 
 // ----- tab: thói quen tập trung -----

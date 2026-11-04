@@ -7,7 +7,7 @@ import {
 } from "../timetableDomain.js";
 import { loadSettings, saveSettings, schoolTimeZone, sendDailyTimetable } from "../timetableService.js";
 import { parseRange, parseUserListQuery } from "../statsDomain.js";
-import { listUsers, loadOverview, loadUserDetail } from "../statsService.js";
+import { listUsers, loadOverview, loadSurveyOverview, loadUserDetail } from "../statsService.js";
 
 // API của trang admin hệ thống (/sysadmin). Tách hoàn toàn khỏi API giáo viên: mật khẩu riêng SYSTEM_ADMIN_PASSWORD.
 const router = Router();
@@ -217,6 +217,14 @@ router.put("/settings", async (req, res, next) => {
 router.get("/stats/overview", async (req, res, next) => {
   try {
     return res.json(await loadOverview(parseRange(req.query.days), schoolTimeZone()));
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/stats/surveys", async (_req, res, next) => {
+  try {
+    return res.json(await loadSurveyOverview());
   } catch (error) {
     return next(error);
   }

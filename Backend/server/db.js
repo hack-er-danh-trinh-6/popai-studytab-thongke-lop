@@ -33,7 +33,8 @@ const MIGRATIONS = [
   { version: "001_pop_mobile_api", file: "./migrations/001_pop_mobile_api.sql" },
   { version: "002_classroom", file: "./migrations/002_classroom.sql" },
   { version: "003_timetable", file: "./migrations/003_timetable.sql" },
-  { version: "004_timetable_1930", file: "./migrations/004_timetable_1930.sql" }
+  { version: "004_timetable_1930", file: "./migrations/004_timetable_1930.sql" },
+  { version: "005_survey_phases", file: "./migrations/005_survey_phases.sql" }
 ];
 
 export async function runMigrations() {

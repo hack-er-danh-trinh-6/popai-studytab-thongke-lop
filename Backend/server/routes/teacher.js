@@ -483,6 +483,46 @@ router.get("/classes/:classId/students/:userId/focus", ...teacherOnly, async (re
 });
 
 // ---------------------------------------------------------------------------
+// Kết quả hai phiếu khảo sát của học sinh trong lớp do giáo viên phụ trách.
+// ---------------------------------------------------------------------------
+router.get("/classes/:classId/assessment-analytics", ...teacherOnly, async (req, res, next) => {
+  try {
+    const klass = await loadOwnedClass(req, res);
+    if (!klass) return;
+    const result = await query(
+      `WITH latest AS (
+         SELECT DISTINCT ON (a.user_id, a.phase)
+                a.user_id, a.phase, a.completed_at, a.scores, a.profile
+           FROM pop_assessment_results a
+           JOIN pop_class_members m ON m.user_id = a.user_id AND m.class_id = $1 AND m.status = 'APPROVED'
+          ORDER BY a.user_id, a.phase, a.completed_at DESC
+       )
+       SELECT u.id, u.full_name, u.email,
+              MAX(latest.completed_at) AS last_survey_at,
+              COALESCE(jsonb_object_agg(latest.phase, jsonb_build_object('completedAt', latest.completed_at, 'scores', latest.scores, 'profile', latest.profile)) FILTER (WHERE latest.phase IS NOT NULL), '{}'::jsonb) AS phases
+         FROM pop_class_members m
+         JOIN pop_users u ON u.id = m.user_id
+         LEFT JOIN latest ON latest.user_id = u.id
+        WHERE m.class_id = $1 AND m.status = 'APPROVED'
+        GROUP BY u.id, u.full_name, u.email
+        ORDER BY u.full_name`,
+      [klass.id]
+    );
+    const students = result.rows.map((row) => ({
+      userId: row.id, fullName: row.full_name, email: row.email,
+      lastSurveyAt: row.last_survey_at?.toISOString() ?? null, phases: row.phases ?? {}
+    }));
+    const averages = (phase) => Object.fromEntries(["VN", "PT", "PB", "TT", "DG"].map((group) => {
+      const values = students.map((s) => Number(s.phases?.[phase]?.scores?.[group])).filter(Number.isFinite);
+      return [group, values.length ? Number((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2)) : null];
+    }));
+    return res.json({ class: { id: klass.id, name: klass.name, schoolName: klass.school_name }, students, averages: { PRE: averages("PRE"), POST: averages("POST") } });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Thống kê tổng hợp cả lớp (chỉ dữ liệu phiên tập trung từ lúc học sinh được duyệt vào lớp)
 // ---------------------------------------------------------------------------
 router.get("/classes/:classId/analytics", ...teacherOnly, async (req, res, next) => {

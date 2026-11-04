@@ -8,6 +8,7 @@ import com.health.pop.data.remote.AssessmentAnswerDto
 import com.health.pop.data.remote.AssessmentSubmissionDto
 import com.health.pop.data.remote.PopApiService
 import com.health.pop.data.remote.apiErrorMessage
+import com.health.pop.domain.model.AssessmentPhase
 import com.health.pop.domain.model.AssessmentQuestion
 import com.health.pop.domain.model.AssessmentResult
 import com.health.pop.domain.usecase.CalculateAssessmentScoresUseCase
@@ -24,26 +25,29 @@ class AssessmentRepository(private val tokenManager: TokenManager) {
     private val _latestSubmission = MutableStateFlow<AssessmentResult?>(null)
     val latestSubmission: StateFlow<AssessmentResult?> = _latestSubmission.asStateFlow()
 
-    fun getQuestions(): List<AssessmentQuestion> = MockDataProvider.assessmentQuestions
+    fun getQuestions(phase: AssessmentPhase): List<AssessmentQuestion> = MockDataProvider.questions(phase)
 
     fun clearLatestSubmission() {
         _latestSubmission.value = null
     }
 
-    suspend fun submitAssessment(answers: Map<String, Int>): ApiResult<AssessmentResult> {
+    suspend fun submitAssessment(phase: AssessmentPhase, answers: Map<String, Int>, profile: Map<String, String> = emptyMap(), openAnswers: Map<String, String> = emptyMap()): ApiResult<AssessmentResult> {
         val calculatedResult = calculateScoresUseCase(answers)
         return try {
             val dtoList = answers.map { AssessmentAnswerDto(it.key, it.value) }
-            val response = apiService.submitAssessment(AssessmentSubmissionDto(dtoList))
+            val response = apiService.submitAssessment(AssessmentSubmissionDto(dtoList, phase.code, profile, openAnswers))
             val body = response.body()
             if (response.isSuccessful && body != null) {
                 val result = AssessmentResult(
-                    id = body.id,
+                    id = body.id, phase = runCatching { AssessmentPhase.valueOf(body.phase) }.getOrDefault(phase),
                     completedAt = body.completedAt,
                     vnScore = body.scores["VN"] ?: calculatedResult.vnScore,
                     ptScore = body.scores["PT"] ?: calculatedResult.ptScore,
                     pbScore = body.scores["PB"] ?: calculatedResult.pbScore,
                     ttScore = body.scores["TT"] ?: calculatedResult.ttScore,
+                    dgScore = body.scores["DG"] ?: 0f,
+                    profile = body.profile,
+                    openAnswers = body.openAnswers,
                     note = body.note
                 )
                 _latestSubmission.value = result
@@ -63,12 +67,15 @@ class AssessmentRepository(private val tokenManager: TokenManager) {
             if (response.isSuccessful && body != null) {
                 val list = body.map { dto ->
                     AssessmentResult(
-                        id = dto.id,
+                        id = dto.id, phase = runCatching { AssessmentPhase.valueOf(dto.phase) }.getOrDefault(AssessmentPhase.PRE),
                         completedAt = dto.completedAt,
                         vnScore = dto.scores["VN"] ?: 0f,
                         ptScore = dto.scores["PT"] ?: 0f,
                         pbScore = dto.scores["PB"] ?: 0f,
                         ttScore = dto.scores["TT"] ?: 0f,
+                        dgScore = dto.scores["DG"] ?: 0f,
+                        profile = dto.profile,
+                        openAnswers = dto.openAnswers,
                         note = dto.note
                     )
                 }

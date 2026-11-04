@@ -30,7 +30,7 @@ let statsRoot = null;
 function statsState() {
   if (!state.stats) {
     state.stats = {
-      range: 30, tab: "overview", overview: null, loading: false, error: null,
+      range: 30, tab: "overview", overview: null, surveys: null, loading: false, error: null,
       classSort: { key: "students", dir: "desc" },
       list: { q: "", role: "", sort: "createdAt", dir: "desc", page: 1, pageSize: 20, data: null, loading: false, detail: null }
     };
@@ -242,7 +242,10 @@ async function loadStatsOverview() {
   const st = statsState();
   st.loading = true; st.error = null; paintStats();
   try {
-    st.overview = await api(`/stats/overview?days=${st.range}`);
+    [st.overview, st.surveys] = await Promise.all([
+      api(`/stats/overview?days=${st.range}`),
+      api("/stats/surveys")
+    ]);
   } catch (error) {
     if (handleFatal(error)) return;
     st.error = error.message;
@@ -353,8 +356,9 @@ function usersTab(o) {
       card("Phễu kích hoạt", hBarChart({ data: u.funnel, color: 5, label: "Phễu kích hoạt" }))));
 }
 
-function assessmentTab(o) {
+function assessmentTab(o, st) {
   const a = o.assessments;
+  const survey = st.surveys;
   const avgRows = GROUP_KEYS.map((key) => ({ label: `${key} · ${GROUP_NAMES[key]}`, count: a.avg[key] ?? 0 }));
   return h("div", { class: "stack" },
     kpiRow(kpi("Lượt làm bài", fmtNum(a.total)), kpi("Người đã làm", fmtNum(a.users), fmtPct(a.users, o.users.total) + " tổng người dùng"),
@@ -367,7 +371,20 @@ function assessmentTab(o) {
       }), "Mỗi thanh là số người ở từng mức 1 → 5 (nhạt → đậm).")),
     grid(2,
       card("Lượt làm bài mỗi ngày", columnChart({ data: dayData(a.perDay, "count"), color: 2, unit: " lượt", label: "Số lượt làm bài mỗi ngày" }), `${o.days} ngày gần nhất`),
-      card("Ý nghĩa các nhóm", h("ul", { class: "plain" }, GROUP_KEYS.map((key) => h("li", {}, h("strong", { text: `${key}: ` }), GROUP_NAMES[key]))))));
+      card("Ý nghĩa các nhóm", h("ul", { class: "plain" }, GROUP_KEYS.map((key) => h("li", {}, h("strong", { text: `${key}: ` }), GROUP_NAMES[key]))))),
+    survey ? surveyRecordsCard(survey) : h("p", { class: "muted", text: "Đang tải dữ liệu từng phiếu…" }));
+}
+
+function surveyRecordsCard(survey) {
+  const groups = ["VN", "PT", "PB", "TT", "DG"];
+  const rows = survey.records.map((r) => h("tr", {},
+    h("td", {}, h("strong", { text: r.fullName }), h("div", { class: "muted small", text: `${r.email} · ${r.className || "Chưa vào lớp"}` })),
+    h("td", { text: r.phase === "PRE" ? "Trước" : "Sau" }),
+    ...groups.map((g) => h("td", { text: r.scores?.[g] ?? "—" })),
+    h("td", { text: fmtDateTime(r.completedAt) })));
+  return h("div", { class: "card chart-card" }, h("h3", { text: "Từng phiếu khảo sát của tất cả người dùng" }),
+    h("p", { class: "muted small", text: `Tổng ${fmtNum(survey.total)} phiếu · Trước: ${fmtNum(survey.phases.PRE)} · Sau: ${fmtNum(survey.phases.POST)}. Dữ liệu câu trả lời đầy đủ có trong API sysadmin.` }),
+    h("div", { class: "table-wrap" }, h("table", { class: "data" }, h("thead", {}, h("tr", {}, ["Người dùng", "Đợt", ...groups, "Thời gian"].map((x) => h("th", { text: x })))), h("tbody", {}, rows))));
 }
 
 function focusTab(o, st) {

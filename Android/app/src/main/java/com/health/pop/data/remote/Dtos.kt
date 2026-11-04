@@ -34,13 +34,19 @@ data class AssessmentAnswerDto(
 )
 
 data class AssessmentSubmissionDto(
-    val answers: List<AssessmentAnswerDto>
+    val answers: List<AssessmentAnswerDto>,
+    val phase: String = "PRE",
+    val profile: Map<String, String> = emptyMap(),
+    val openAnswers: Map<String, String> = emptyMap()
 )
 
 data class AssessmentResultDto(
     val id: String,
     val completedAt: String,
+    val phase: String = "PRE",
     val scores: Map<String, Float>,
+    val profile: Map<String, String> = emptyMap(),
+    val openAnswers: Map<String, String> = emptyMap(),
     val note: String
 )
 

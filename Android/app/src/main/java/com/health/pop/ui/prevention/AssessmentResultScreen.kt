@@ -47,7 +47,7 @@ fun AssessmentResultScreen(
     PopPage(
         c = c,
         label = "POP AI  ·  KẾT QUẢ",
-        title = "Kết quả tự đánh giá",
+        title = "Kết quả ${result?.phase?.title ?: viewModel.phase.title}",
         bubble = when {
             error != null -> "Chưa có kết quả. Xem thông báo bên dưới nhé."
             result == null -> "Chưa có kết quả nào để hiển thị."
@@ -64,6 +64,9 @@ fun AssessmentResultScreen(
             ScoreCard(AssessmentGroup.PT, "📱", "Phụ thuộc thiết bị", result.ptScore, c)
             ScoreCard(AssessmentGroup.PB, "🧩", "Phân mảnh chú ý", result.pbScore, c)
             ScoreCard(AssessmentGroup.TT, "🎯", "Tập trung sâu", result.ttScore, c)
+            if (result.phase.code == "POST") {
+                ScoreCard(AssessmentGroup.DG, "🌟", "Hiệu quả mô hình P.O.P và POP-AI", result.dgScore, c)
+            }
 
             StickerCard(c, contentPadding = 18.dp) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

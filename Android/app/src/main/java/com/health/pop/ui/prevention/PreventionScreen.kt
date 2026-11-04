@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.health.pop.domain.model.AssessmentGroup
+import com.health.pop.domain.model.AssessmentPhase
 import com.health.pop.ui.common.PopAzure
 import com.health.pop.ui.common.PopBadge
 import com.health.pop.ui.common.PopButton
@@ -43,6 +44,7 @@ internal fun groupColor(group: AssessmentGroup): Color = when (group) {
     AssessmentGroup.PT -> PopAzure
     AssessmentGroup.PB -> PopSun
     AssessmentGroup.TT -> PopMint
+    AssessmentGroup.DG -> PopPink
 }
 
 /**
@@ -52,7 +54,7 @@ internal fun groupColor(group: AssessmentGroup): Color = when (group) {
 @Composable
 fun PreventionScreen(
     viewModel: PreventionViewModel,
-    onStartAssessment: () -> Unit
+    onStartAssessment: (AssessmentPhase) -> Unit
 ) {
     val history by viewModel.historyState.collectAsState()
     val c = rememberPopPalette()
@@ -61,7 +63,7 @@ fun PreventionScreen(
         c = c,
         label = "POP AI  ·  TỰ ĐÁNH GIÁ",
         title = "Hiểu về Popcorn Brain",
-        bubble = if (history.isEmpty()) "Cùng hiểu não mình một chút nhé 🍿" else "Làm lại bài đánh giá để xem mình tiến bộ nhé 📈",
+        bubble = if (history.isEmpty()) "Hãy bắt đầu bằng phiếu trước thực nghiệm nhé 🍿" else "Bạn có thể làm phiếu sau thực nghiệm khi hoàn tất chương trình 📈",
         mood = PopMood.Happy
     ) {
         PopText("Nhận diện xao nhãng & Rèn luyện sự tập trung", c.textSoft, 14)
@@ -86,19 +88,21 @@ fun PreventionScreen(
 
         // Bài tự đánh giá
         StickerCard(c, contentPadding = 18.dp) {
-            PrevSectionHeader("📝", PopSun, "Bài tự đánh giá 20 câu", c)
+            PrevSectionHeader("📝", PopSun, "Hai đợt khảo sát nghiên cứu", c)
             Spacer(Modifier.height(12.dp))
             PopText(
-                "Đánh giá 4 chỉ số: VN (video ngắn), PT (phụ thuộc thiết bị), PB (phân mảnh chú ý), TT (tập trung sâu). Tự theo dõi tiến trình trước/sau rèn luyện.",
+                "Phiếu trước thực nghiệm có 20 câu VN/PT/PB/TT. Phiếu sau thực nghiệm có 25 câu, thêm DG đánh giá hiệu quả mô hình P.O.P và POP-AI.",
                 c.text,
                 15
             )
             Spacer(Modifier.height(16.dp))
             PopButton(
-                text = "Bắt đầu làm bài đánh giá",
+                text = "Làm phiếu trước thực nghiệm",
                 c = c,
-                onClick = onStartAssessment
+                onClick = { onStartAssessment(AssessmentPhase.PRE) }
             )
+            Spacer(Modifier.height(10.dp))
+            PopButton(text = "Làm phiếu sau thực nghiệm", c = c, onClick = { onStartAssessment(AssessmentPhase.POST) })
         }
 
         // Lịch sử đánh giá
