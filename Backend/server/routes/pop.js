@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { query } from "../db.js";
+import { pool, query } from "../db.js";
 import { FOCUS_STREAK_MINUTES, computeStreak, formatJournalDate, parseJournalDate, scoreSurvey, SURVEY_PHASES } from "../domain.js";
 import { buildReflectionContext, requestAdvice } from "../ai.js";
 import { loadActivityContext, loadJournalForDate, resolveTimeZone } from "../aiContext.js";
@@ -50,31 +50,55 @@ router.post("/assessment/submit", async (req, res, next) => {
   try {
     const phase = req.body?.phase ?? SURVEY_PHASES.PRE;
     if (!validPhase(phase)) return res.status(400).json({ message: "Đợt khảo sát không hợp lệ." });
-    let scores;
-    try {
-      scores = scoreSurvey(phase, req.body?.answers);
-    } catch (error) {
-      return res.status(400).json({ message: error.message });
-    }
     const profile = cleanJsonObject(req.body?.profile, 12, 100);
     const openAnswers = cleanJsonObject(req.body?.openAnswers, 6, 2000);
     if (profile === null || openAnswers === null) return res.status(400).json({ message: "Thông tin khảo sát không hợp lệ." });
+    let scores;
+    try {
+      const includeDg = phase === SURVEY_PHASES.POST && profile.studyGroup === "Nhóm thực nghiệm";
+      scores = scoreSurvey(phase, req.body?.answers, includeDg);
+    } catch (error) {
+      return res.status(400).json({ message: error.message });
+    }
     const id = randomUUID();
     const answers = req.body.answers.map(({ questionId, score }) => ({ questionId, score }));
     const note = phase === SURVEY_PHASES.POST
       ? "Phiếu sau thực nghiệm · phục vụ nghiên cứu, không phải chẩn đoán"
       : "Phiếu trước thực nghiệm · phục vụ nghiên cứu, không phải chẩn đoán";
-    const inserted = await query(
-      `INSERT INTO pop_assessment_results (id, user_id, phase, answers, scores, profile, open_answers, note)
-       VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8)
-       RETURNING id, completed_at, phase, scores, profile, open_answers, note`,
-      [id, req.user.id, phase, JSON.stringify(answers), JSON.stringify(scores), JSON.stringify(profile), JSON.stringify(openAnswers), note]
-    );
-    const row = inserted.rows[0];
-    return res.status(201).json({
-      id: row.id, completedAt: row.completed_at.toISOString(), phase: row.phase,
-      scores: row.scores, profile: row.profile, openAnswers: row.open_answers, note: row.note
-    });
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const claim = await client.query(
+        `INSERT INTO pop_assessment_phase_claims (user_id, phase)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id, phase) DO NOTHING
+         RETURNING phase`,
+        [req.user.id, phase]
+      );
+      if (claim.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({ message: phase === SURVEY_PHASES.PRE
+          ? "Bạn đã hoàn thành phiếu trước thực nghiệm. Mỗi phiếu chỉ được làm một lần."
+          : "Bạn đã hoàn thành phiếu sau thực nghiệm. Mỗi phiếu chỉ được làm một lần." });
+      }
+      const inserted = await client.query(
+        `INSERT INTO pop_assessment_results (id, user_id, phase, answers, scores, profile, open_answers, note)
+         VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8)
+         RETURNING id, completed_at, phase, scores, profile, open_answers, note`,
+        [id, req.user.id, phase, JSON.stringify(answers), JSON.stringify(scores), JSON.stringify(profile), JSON.stringify(openAnswers), note]
+      );
+      await client.query("COMMIT");
+      const row = inserted.rows[0];
+      return res.status(201).json({
+        id: row.id, completedAt: row.completed_at.toISOString(), phase: row.phase,
+        scores: row.scores, profile: row.profile, openAnswers: row.open_answers, note: row.note
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     return next(error);
   }

@@ -27,14 +27,14 @@ export function formatJournalDate(isoDate) {
 export const SURVEY_PHASES = { PRE: "PRE", POST: "POST" };
 export const SURVEY_GROUPS = ["VN", "PT", "PB", "TT"];
 
-export function scoreSurvey(phase, answers) {
+export function scoreSurvey(phase, answers, includeDg = phase === SURVEY_PHASES.POST) {
   const isPost = phase === SURVEY_PHASES.POST;
-  const expectedCount = isPost ? 25 : 20;
+  const expectedCount = isPost && includeDg ? 25 : 20;
   if (!Array.isArray(answers) || answers.length !== expectedCount) {
     throw new Error(`Vui lòng gửi đủ ${expectedCount} câu trả lời.`);
   }
   const seen = new Set();
-  const groups = { VN: [], PT: [], PB: [], TT: [], ...(isPost ? { DG: [] } : {}) };
+  const groups = { VN: [], PT: [], PB: [], TT: [], ...(isPost && includeDg ? { DG: [] } : {}) };
   for (const answer of answers) {
     const questionId = answer?.questionId;
     const score = Number(answer?.score);
@@ -42,6 +42,7 @@ export function scoreSurvey(phase, answers) {
       typeof questionId !== "string" ||
       !/^(VN|PT|PB|TT|DG)[1-5]$/.test(questionId) ||
       (!isPost && questionId.startsWith("DG")) ||
+      (!includeDg && questionId.startsWith("DG")) ||
       (isPost && !questionId.startsWith("DG") && !SURVEY_GROUPS.some((group) => questionId.startsWith(group))) ||
       !Number.isInteger(score) || score < 1 || score > 5 ||
       seen.has(questionId)

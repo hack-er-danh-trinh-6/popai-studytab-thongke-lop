@@ -24,7 +24,7 @@ h1 { font-size: 1.5rem; } h2 { font-size: 1.15rem; } h3 { font-size: 1rem; }
 .center-wrap { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
 .auth-card { width: 100%; max-width: 400px; }
 label { display: block; font-weight: 600; margin: .8rem 0 .25rem; font-size: .9rem; }
-input[type=text], input[type=password], input[type=time], select {
+input[type=text], input[type=password], input[type=time], input[type=date], select {
   width: 100%; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 10px;
   background: var(--bg); color: var(--text); font: inherit;
 }
@@ -142,4 +142,5 @@ table.data .num { text-align: right; white-space: nowrap; }
 .pager { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin: .8rem 0 .4rem; }
 .pager .actions { margin: 0; }
 .row.card { align-items: end; }
+.survey-date-filter { align-items: end; }
 .stats-wrap h2 { margin-bottom: .2rem; }

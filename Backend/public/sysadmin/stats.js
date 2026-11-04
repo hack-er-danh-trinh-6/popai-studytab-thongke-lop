@@ -32,7 +32,11 @@ function statsState() {
     state.stats = {
       range: 30, tab: "overview", overview: null, surveys: null, loading: false, error: null,
       classSort: { key: "students", dir: "desc" },
-      list: { q: "", role: "", sort: "createdAt", dir: "desc", page: 1, pageSize: 20, data: null, loading: false, detail: null }
+      list: {
+        q: "", role: "", sort: "createdAt", dir: "desc", page: 1, pageSize: 20, data: null, loading: false, detail: null,
+        assessmentFrom: "2026-07-20", assessmentTo: "2026-07-30",
+        assessmentDraftFrom: "2026-07-20", assessmentDraftTo: "2026-07-30"
+      }
     };
   }
   return state.stats;
@@ -56,6 +60,21 @@ function fmtDateTime(iso, withTime = true) {
   const zone = state.stats?.overview?.timeZone;
   try { return new Intl.DateTimeFormat("vi-VN", { ...options, timeZone: zone }).format(new Date(iso)); }
   catch { return new Intl.DateTimeFormat("vi-VN", options).format(new Date(iso)); }
+}
+function statsLocalIsoDate(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "";
+  const zone = state.stats?.overview?.timeZone;
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(date);
+    const fields = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+    return `${fields.year}-${fields.month}-${fields.day}`;
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
 }
 const scoreText = (scores) => (scores ? GROUP_KEYS.map((key) => `${key} ${fmtDec(scores[key])}`).join(" · ") : "—");
 
@@ -524,6 +543,32 @@ function paintUserResults() {
 function renderUserDetail(list) {
   const d = list.detail; const u = d.user;
   const labels = d.focusPerDay.map((r) => dayLabel(r.day));
+  const assessmentRows = d.assessments.filter((row) => {
+    const day = statsLocalIsoDate(row.completedAt);
+    return day && (!list.assessmentFrom || day >= list.assessmentFrom) && (!list.assessmentTo || day <= list.assessmentTo);
+  });
+  const fromInput = h("input", { id: "assessmentDateFrom", type: "date", value: list.assessmentDraftFrom });
+  const toInput = h("input", { id: "assessmentDateTo", type: "date", value: list.assessmentDraftTo });
+  fromInput.addEventListener("change", () => { list.assessmentDraftFrom = fromInput.value; });
+  toInput.addEventListener("change", () => { list.assessmentDraftTo = toInput.value; });
+  const dateFilter = h("div", { class: "row survey-date-filter" },
+    h("div", { class: "grow" }, h("label", { for: "assessmentDateFrom", text: "Từ ngày" }), fromInput),
+    h("div", { class: "grow" }, h("label", { for: "assessmentDateTo", text: "Đến ngày" }), toInput),
+    h("button", { class: "secondary", type: "button", text: "Lọc ngày", onclick: () => {
+      const from = list.assessmentDraftFrom;
+      const to = list.assessmentDraftTo;
+      if (from && to && from > to) return toast("Ngày bắt đầu không được sau ngày kết thúc.", true);
+      list.assessmentFrom = from;
+      list.assessmentTo = to;
+      paintUserResults();
+    } }),
+    h("button", { class: "ghost", type: "button", text: "Tất cả", onclick: () => {
+      list.assessmentFrom = "";
+      list.assessmentTo = "";
+      list.assessmentDraftFrom = "";
+      list.assessmentDraftTo = "";
+      paintUserResults();
+    } }));
   const planText = d.plan
     ? `Giới hạn video ${fmtMin(d.plan.dailyShortVideoLimitMinutes)}/ngày · phiên ${fmtMin(d.plan.sessionDurationMinutes)} · mục tiêu ${d.plan.targetDays} ngày · theo dõi: ${d.plan.trackedPlatforms.join(", ") || "—"}`
     : "Chưa lập kế hoạch.";
@@ -541,10 +586,14 @@ function renderUserDetail(list) {
         lineChart({ labels, series: [{ name: "Video ngắn", values: d.journalPerDay.map((r) => r.video), color: 3 }, { name: "Tập trung", values: d.journalPerDay.map((r) => r.focus), color: 1 }], label: "Phút video ngắn và tập trung theo nhật ký 30 ngày" }),
         legendLine([{ name: "Video ngắn", color: 3 }, { name: "Tập trung", color: 1 }])))),
     h("h3", { text: "Lịch sử đánh giá" }),
+    h("p", { class: "muted small", text: "Bộ lọc dùng ngày địa phương theo múi giờ thống kê; thời điểm gốc của phiếu không bị thay đổi." }),
+    dateFilter,
+    h("p", { class: "muted small", text: `Hiển thị ${assessmentRows.length}/${d.assessments.length} phiếu trong kết quả đã tải.` }),
     dataTable({
       columns: [{ key: "completedAt", label: "Thời điểm", render: (r) => fmtDateTime(r.completedAt) },
         ...GROUP_KEYS.map((key) => ({ key, label: key, align: "num", render: (r) => fmtDec(r.scores?.[key]) }))],
-      rows: d.assessments, empty: "Chưa làm bài đánh giá nào."
+      rows: assessmentRows,
+      empty: d.assessments.length ? "Không có phiếu nào trong khoảng ngày đã chọn." : "Chưa làm bài đánh giá nào."
     }));
 }
 

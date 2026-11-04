@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FOCUS_STREAK_MINUTES, computeStreak, formatJournalDate, normalizeEmail, parseJournalDate, scoreAssessment } from "./domain.js";
+import { FOCUS_STREAK_MINUTES, computeStreak, formatJournalDate, normalizeEmail, parseJournalDate, scoreAssessment, scoreSurvey, SURVEY_PHASES } from "./domain.js";
 
 test("normalizes account email without altering its content", () => {
   assert.equal(normalizeEmail("  Test@Example.COM "), "test@example.com");
@@ -32,6 +32,23 @@ test("rejects incomplete, duplicate, or out-of-range assessment answers", () => 
   assert.throws(() => scoreAssessment(answers.slice(1)), /đủ 20/);
   assert.throws(() => scoreAssessment(duplicateAnswers), /không hợp lệ/);
   assert.throws(() => scoreAssessment(answers.map((answer, index) => index === 0 ? { ...answer, score: 6 } : answer)), /không hợp lệ/);
+});
+
+test("POST control group accepts the 20 common items and excludes DG", () => {
+  const answers = ["VN", "PT", "PB", "TT"].flatMap((group) =>
+    [1, 2, 3, 4, 5].map((n) => ({ questionId: `${group}${n}`, score: n }))
+  );
+  assert.deepEqual(scoreSurvey(SURVEY_PHASES.POST, answers, false), { VN: 3, PT: 3, PB: 3, TT: 3 });
+  assert.throws(() => scoreSurvey(SURVEY_PHASES.POST, answers.slice(1), false), /đủ 20/);
+  assert.throws(() => scoreSurvey(SURVEY_PHASES.POST, [...answers, { questionId: "DG1", score: 3 }], false), /đủ 20/);
+});
+
+test("POST experimental group requires all 25 common and DG items", () => {
+  const answers = ["VN", "PT", "PB", "TT", "DG"].flatMap((group) =>
+    [1, 2, 3, 4, 5].map((n) => ({ questionId: `${group}${n}`, score: n }))
+  );
+  assert.deepEqual(scoreSurvey(SURVEY_PHASES.POST, answers, true), { VN: 3, PT: 3, PB: 3, TT: 3, DG: 3 });
+  assert.throws(() => scoreSurvey(SURVEY_PHASES.POST, answers.slice(0, 20), true), /đủ 25/);
 });
 
 test("focus streak needs a 60-minute session", () => {

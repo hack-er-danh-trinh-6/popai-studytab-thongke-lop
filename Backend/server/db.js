@@ -34,7 +34,8 @@ const MIGRATIONS = [
   { version: "002_classroom", file: "./migrations/002_classroom.sql" },
   { version: "003_timetable", file: "./migrations/003_timetable.sql" },
   { version: "004_timetable_1930", file: "./migrations/004_timetable_1930.sql" },
-  { version: "005_survey_phases", file: "./migrations/005_survey_phases.sql" }
+  { version: "005_survey_phases", file: "./migrations/005_survey_phases.sql" },
+  { version: "006_one_submission_per_phase", file: "./migrations/006_one_submission_per_phase.sql" }
 ];
 
 export async function runMigrations() {

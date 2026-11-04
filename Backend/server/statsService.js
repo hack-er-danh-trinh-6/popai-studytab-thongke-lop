@@ -336,7 +336,7 @@ export async function loadUserDetail(userId, timeZone) {
   if (found.rowCount !== 1) return null;
   const p = [timeZone, 30];
   const [assessments, focusDays, journalDays, plan, statuses] = await Promise.all([
-    query("SELECT completed_at, scores FROM pop_assessment_results WHERE user_id = $1 ORDER BY completed_at DESC LIMIT 20", [userId]),
+    query("SELECT completed_at, scores FROM pop_assessment_results WHERE user_id = $1 ORDER BY completed_at DESC", [userId]),
     query(
       `SELECT d.day::text AS day, COALESCE(SUM(f.actual_minutes) FILTER (WHERE f.status = 'COMPLETED'), 0)::int AS minutes
          FROM (${SERIES}) d
