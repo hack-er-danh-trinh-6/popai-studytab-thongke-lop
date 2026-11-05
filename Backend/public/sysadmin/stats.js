@@ -9,16 +9,54 @@ const GROUP_NAMES = {
   VN: "Thói quen xem video ngắn",
   PT: "Mức độ phụ thuộc thiết bị số",
   PB: "Biểu hiện phân mảnh chú ý",
-  TT: "Khả năng tập trung sâu"
+  TT: "Khả năng tập trung sâu",
+  DG: "Đánh giá mô hình P.O.P"
 };
 const GROUP_KEYS = ["VN", "PT", "PB", "TT"];
+const SURVEY_GROUPS = ["VN", "PT", "PB", "TT", "DG"];
+const SURVEY_PHASE_LABELS = { PRE: "Trước thực nghiệm", POST: "Sau thực nghiệm" };
+const SURVEY_QUESTIONS = [
+  { id: "VN1", group: "VN", text: "Tôi thường xuyên xem TikTok, Reels hoặc Shorts mỗi ngày." },
+  { id: "VN2", group: "VN", text: "Tôi có thói quen xem liên tục nhiều video ngắn trong một lần sử dụng." },
+  { id: "VN3", group: "VN", text: "Tôi thường mở các ứng dụng video ngắn khi cảm thấy rảnh rỗi." },
+  { id: "VN4", group: "VN", text: "Tôi ưu tiên xem video ngắn hơn đọc các bài viết hoặc tài liệu dài." },
+  { id: "VN5", group: "VN", text: "Tôi khó dừng lại khi đang xem các video ngắn." },
+  { id: "PT1", group: "PT", text: "Tôi thường xuyên kiểm tra điện thoại ngay cả khi không có thông báo mới." },
+  { id: "PT2", group: "PT", text: "Tôi cảm thấy khó chịu khi không có điện thoại hoặc Internet bên cạnh." },
+  { id: "PT3", group: "PT", text: "Tôi thường sử dụng điện thoại trong lúc học tập hoặc làm bài tập." },
+  { id: "PT4", group: "PT", text: "Tôi có thói quen chuyển qua lại giữa nhiều ứng dụng trong thời gian ngắn." },
+  { id: "PT5", group: "PT", text: "Tôi cảm thấy buồn chán khi không sử dụng thiết bị số." },
+  { id: "PB1", group: "PB", text: "Tôi dễ bị phân tâm khi học tập hoặc thực hiện nhiệm vụ quan trọng." },
+  { id: "PB2", group: "PB", text: "Tôi thường mất kiên nhẫn khi phải đọc hoặc xem nội dung dài." },
+  { id: "PB3", group: "PB", text: "Tôi khó duy trì sự tập trung vào một việc trong thời gian dài." },
+  { id: "PB4", group: "PB", text: "Tôi thường chuyển sang hoạt động khác khi cảm thấy nội dung không đủ hấp dẫn." },
+  { id: "PB5", group: "PB", text: "Tôi cảm thấy bồn chồn khi không được truy cập mạng xã hội hoặc video ngắn." },
+  { id: "TT1", group: "TT", text: "Tôi có thể tập trung học tập liên tục từ 30 phút trở lên mà không bị phân tâm." },
+  { id: "TT2", group: "TT", text: "Tôi có thể hoàn thành nhiệm vụ học tập mà không cần kiểm tra điện thoại." },
+  { id: "TT3", group: "TT", text: "Tôi duy trì được sự chú ý khi đọc tài liệu hoặc sách có nội dung dài." },
+  { id: "TT4", group: "TT", text: "Tôi có thể tập trung vào một nhiệm vụ cho đến khi hoàn thành." },
+  { id: "TT5", group: "TT", text: "Tôi chủ động kiểm soát các yếu tố gây xao nhãng trong quá trình học tập." },
+  { id: "DG1", group: "DG", text: "Mô hình P.O.P giúp tôi hiểu rõ hơn về hội chứng Popcorn Brain." },
+  { id: "DG2", group: "DG", text: "Các hoạt động của mô hình giúp tôi giảm thời gian sử dụng video ngắn không cần thiết." },
+  { id: "DG3", group: "DG", text: "Trợ lý ảo POP-AI hỗ trợ tôi theo dõi và cải thiện khả năng tập trung sâu." },
+  { id: "DG4", group: "DG", text: "Tôi nhận thấy khả năng tập trung của mình được cải thiện sau quá trình tham gia dự án." },
+  { id: "DG5", group: "DG", text: "Tôi mong muốn tiếp tục áp dụng mô hình P.O.P và sử dụng POP-AI trong thời gian tới." }
+];
+const OPEN_ANSWER_LABELS = {
+  cause: "Nguyên nhân khiến học sinh khó tập trung",
+  support: "Mong muốn được hỗ trợ cải thiện tập trung",
+  solution: "Giải pháp hạn chế Popcorn Brain",
+  highlight: "Điều tâm đắc nhất sau khi tham gia P.O.P",
+  aiSupport: "POP-AI đã hỗ trợ tập trung như thế nào",
+  improvement: "Nội dung cần bổ sung hoặc cải tiến"
+};
 const ROLE_LABELS = { STUDENT: "Học sinh", TEACHER: "Giáo viên" };
 const FOCUS_STATUS_LABELS = { COMPLETED: "Hoàn thành", PAUSED: "Tạm dừng", RUNNING: "Đang chạy", NOT_STARTED: "Chưa bắt đầu" };
 const MEMBER_STATUS_LABELS = { APPROVED: "Đã duyệt", PENDING: "Chờ duyệt", REJECTED: "Từ chối" };
 const STATS_TABS = [
   ["overview", "Tổng quan"],
   ["users", "Người dùng"],
-  ["assessment", "Đánh giá"],
+  ["survey", "Khảo sát"],
   ["focus", "Tập trung"],
   ["journal", "Nhật ký & kế hoạch"],
   ["classes", "Lớp học"],
@@ -31,6 +69,8 @@ function statsState() {
   if (!state.stats) {
     state.stats = {
       range: 30, tab: "overview", overview: null, surveys: null, loading: false, error: null,
+      surveyLoading: false, surveyError: null,
+      surveyFilters: { phase: "", from: "", to: "", q: "" },
       classSort: { key: "students", dir: "desc" },
       list: {
         q: "", role: "", sort: "createdAt", dir: "desc", page: 1, pageSize: 20, data: null, loading: false, detail: null,
@@ -260,16 +300,27 @@ const twoLine = (main, sub) => h("div", {}, h("div", { text: main }), sub ? h("d
 async function loadStatsOverview() {
   const st = statsState();
   st.loading = true; st.error = null; paintStats();
+  const [overview, surveys] = await Promise.allSettled([
+    api(`/stats/overview?days=${st.range}`),
+    api("/stats/surveys")
+  ]);
+  if (overview.status === "fulfilled") st.overview = overview.value;
+  else if (!handleFatal(overview.reason)) st.error = overview.reason.message;
+  if (surveys.status === "fulfilled") { st.surveys = surveys.value; st.surveyError = null; }
+  else st.surveyError = surveys.reason?.message ?? "Không tải được dữ liệu khảo sát.";
+  st.loading = false;
+  paintStats();
+}
+
+async function loadSurveyData() {
+  const st = statsState();
+  st.surveyLoading = true; st.surveyError = null; paintStats();
   try {
-    [st.overview, st.surveys] = await Promise.all([
-      api(`/stats/overview?days=${st.range}`),
-      api("/stats/surveys")
-    ]);
+    st.surveys = await api("/stats/surveys");
   } catch (error) {
-    if (handleFatal(error)) return;
-    st.error = error.message;
+    if (!handleFatal(error)) st.surveyError = error.message;
   } finally {
-    st.loading = false;
+    st.surveyLoading = false;
   }
   paintStats();
 }
@@ -375,35 +426,296 @@ function usersTab(o) {
       card("Phễu kích hoạt", hBarChart({ data: u.funnel, color: 5, label: "Phễu kích hoạt" }))));
 }
 
-function assessmentTab(o, st) {
-  const a = o.assessments;
-  const survey = st.surveys;
-  const avgRows = GROUP_KEYS.map((key) => ({ label: `${key} · ${GROUP_NAMES[key]}`, count: a.avg[key] ?? 0 }));
-  return h("div", { class: "stack" },
-    kpiRow(kpi("Lượt làm bài", fmtNum(a.total)), kpi("Người đã làm", fmtNum(a.users), fmtPct(a.users, o.users.total) + " tổng người dùng"),
-      kpi("Trung bình lượt/người", a.users ? fmtDec(a.total / a.users) : "—")),
-    grid(2,
-      card("Điểm trung bình theo nhóm", hBarChart({ data: avgRows, color: 0, format: fmtDec, maxValue: 5, label: "Điểm trung bình từng nhóm trên thang 1 đến 5" }),
-        "Dùng kết quả gần nhất của mỗi người (thang 1–5)."),
-      card("Phân bố điểm theo nhóm", stackedBars({
-        rows: GROUP_KEYS.map((key) => ({ label: key, title: GROUP_NAMES[key], values: a.distribution[key] })), label: "Phân bố điểm 1 đến 5 theo nhóm"
-      }), "Mỗi thanh là số người ở từng mức 1 → 5 (nhạt → đậm).")),
-    grid(2,
-      card("Lượt làm bài mỗi ngày", columnChart({ data: dayData(a.perDay, "count"), color: 2, unit: " lượt", label: "Số lượt làm bài mỗi ngày" }), `${o.days} ngày gần nhất`),
-      card("Ý nghĩa các nhóm", h("ul", { class: "plain" }, GROUP_KEYS.map((key) => h("li", {}, h("strong", { text: `${key}: ` }), GROUP_NAMES[key]))))),
-    survey ? surveyRecordsCard(survey) : h("p", { class: "muted", text: "Đang tải dữ liệu từng phiếu…" }));
+// ---------- Tab Khảo sát ----------
+function surveyFilters() {
+  const st = statsState();
+  if (!st.surveyFilters) st.surveyFilters = { phase: "", from: "", to: "", q: "" };
+  return st.surveyFilters;
 }
 
-function surveyRecordsCard(survey) {
-  const groups = ["VN", "PT", "PB", "TT", "DG"];
-  const rows = survey.records.map((r) => h("tr", {},
-    h("td", {}, h("strong", { text: r.fullName }), h("div", { class: "muted small", text: `${r.email} · ${r.className || "Chưa vào lớp"}` })),
-    h("td", { text: r.phase === "PRE" ? "Trước" : "Sau" }),
-    ...groups.map((g) => h("td", { text: r.scores?.[g] ?? "—" })),
-    h("td", { text: fmtDateTime(r.completedAt) })));
-  return h("div", { class: "card chart-card" }, h("h3", { text: "Từng phiếu khảo sát của tất cả người dùng" }),
-    h("p", { class: "muted small", text: `Tổng ${fmtNum(survey.total)} phiếu · Trước: ${fmtNum(survey.phases.PRE)} · Sau: ${fmtNum(survey.phases.POST)}. Dữ liệu câu trả lời đầy đủ có trong API sysadmin.` }),
-    h("div", { class: "table-wrap" }, h("table", { class: "data" }, h("thead", {}, h("tr", {}, ["Người dùng", "Đợt", ...groups, "Thời gian"].map((x) => h("th", { text: x })))), h("tbody", {}, rows))));
+const surveyDay = (iso) => statsLocalIsoDate(iso);
+
+function meanOf(values) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : null;
+}
+
+function buildSurveyStats(records) {
+  const participants = new Map();
+  const perQuestion = new Map(SURVEY_QUESTIONS.map((question) => [question.id, { PRE: [], POST: [] }]));
+  const studyGroup = new Map();
+  const grade = new Map();
+  const perDay = new Map();
+  const phaseScores = { PRE: new Map(), POST: new Map() };
+  let dgAnswers = 0;
+  records.forEach((record) => {
+    const phase = record.phase === "POST" ? "POST" : "PRE";
+    const key = record.userId || record.email || record.id;
+    const entry = participants.get(key) ?? { pre: false, post: false };
+    entry[phase === "POST" ? "post" : "pre"] = true;
+    participants.set(key, entry);
+    const day = surveyDay(record.completedAt);
+    if (day) {
+      const bucket = perDay.get(day) ?? { day, pre: 0, post: 0 };
+      bucket[phase === "POST" ? "post" : "pre"] += 1;
+      perDay.set(day, bucket);
+    }
+    const groupLabel = String(record.profile?.studyGroup ?? "").trim() || "Chưa chọn";
+    studyGroup.set(groupLabel, (studyGroup.get(groupLabel) ?? 0) + 1);
+    const gradeLabel = String(record.profile?.grade ?? "").trim() || "Chưa chọn";
+    grade.set(gradeLabel, (grade.get(gradeLabel) ?? 0) + 1);
+    (record.answers ?? []).forEach((answer) => {
+      const score = Number(answer.score);
+      if (!Number.isFinite(score)) return;
+      if (String(answer.questionId ?? "").startsWith("DG")) dgAnswers += 1;
+      const slot = perQuestion.get(answer.questionId);
+      if (slot) slot[phase].push(score);
+    });
+    SURVEY_GROUPS.forEach((group) => {
+      const value = Number(record.scores?.[group]);
+      if (!Number.isFinite(value)) return;
+      const list = phaseScores[phase].get(group) ?? [];
+      list.push(value);
+      phaseScores[phase].set(group, list);
+    });
+  });
+  const averages = (phase) => Object.fromEntries(SURVEY_GROUPS.map((group) => [group, meanOf(phaseScores[phase].get(group) ?? [])]));
+  const participantList = [...participants.values()];
+  return {
+    total: records.length,
+    phases: { PRE: records.filter((record) => record.phase !== "POST").length, POST: records.filter((record) => record.phase === "POST").length },
+    participants: participantList.length,
+    both: participantList.filter((entry) => entry.pre && entry.post).length,
+    preOnly: participantList.filter((entry) => entry.pre && !entry.post).length,
+    postOnly: participantList.filter((entry) => !entry.pre && entry.post).length,
+    dgAnswers,
+    averages: { PRE: averages("PRE"), POST: averages("POST") },
+    perQuestion: SURVEY_QUESTIONS.map((question) => ({
+      id: question.id, group: question.group, text: question.text,
+      PRE: perQuestion.get(question.id).PRE, POST: perQuestion.get(question.id).POST
+    })),
+    studyGroup: [...studyGroup.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count),
+    grade: [...grade.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => a.label.localeCompare(b.label, "vi")),
+    perDay: [...perDay.values()].sort((a, b) => (a.day < b.day ? -1 : 1))
+  };
+}
+
+/** Cột ghép: so sánh hai đợt cho từng nhóm chỉ số. */
+function groupedBarChart({ rows, series, maxValue = 5, format = fmtDec, label }) {
+  if (!rows.length) return emptyNote();
+  const W = 460; const H = 230; const L = 42; const R = 10; const T = 12; const B = 46;
+  const iw = W - L - R; const ih = H - T - B;
+  const max = maxValue ?? niceMax(Math.max(...rows.flatMap((row) => row.values.filter((value) => Number.isFinite(value))), 1));
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": label });
+  for (const tick of axisTicks(max)) {
+    const y = T + ih - (ih * tick) / max;
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: y, y2: y, class: "grid" }));
+    svg.append(svgEl("text", { x: L - 6, y: y + 4, "text-anchor": "end", class: "ax", text: format(tick) }));
+  }
+  const bandW = iw / rows.length;
+  const barW = Math.min(28, (bandW - 14) / Math.max(1, series.length));
+  rows.forEach((row, index) => {
+    const center = L + index * bandW + bandW / 2;
+    const startX = center - (barW * series.length) / 2;
+    series.forEach((item, seriesIndex) => {
+      const value = row.values[seriesIndex];
+      if (!Number.isFinite(value)) return;
+      const height = (ih * value) / max;
+      svg.append(svgEl("rect", {
+        x: startX + seriesIndex * barW, y: T + ih - height,
+        width: Math.max(1, barW - 3), height, rx: 2, class: `f${item.color ?? seriesIndex}`
+      }, tip(`${row.title ?? row.label} · ${item.name}: ${format(value)}`)));
+    });
+    svg.append(svgEl("text", { x: center, y: T + ih + 16, "text-anchor": "middle", class: "ax label", text: row.label }));
+    if (row.title) svg.append(svgEl("text", { x: center, y: T + ih + 32, "text-anchor": "middle", class: "ax", text: clip(row.title, 20) }));
+  });
+  return svg;
+}
+
+function miniDistribution(counts) {
+  const total = counts.reduce((sum, value) => sum + value, 0);
+  if (!total) return h("span", { class: "muted small", text: "—" });
+  return h("div", { class: "mini-dist" },
+    counts.map((count, index) => h("span", {
+      class: "bg0", style: `width:${(count / total) * 100}%;opacity:${0.22 + index * 0.18}`,
+      title: `Mức ${index + 1}: ${count} lượt`
+    })));
+}
+
+function filterSurveyRecords(records, filters) {
+  const query = String(filters.q ?? "").trim().toLowerCase();
+  return records.filter((record) => {
+    if (filters.phase && record.phase !== filters.phase) return false;
+    const day = surveyDay(record.completedAt);
+    if (filters.from && (!day || day < filters.from)) return false;
+    if (filters.to && (!day || day > filters.to)) return false;
+    if (query) {
+      const haystack = `${record.fullName ?? ""} ${record.email ?? ""} ${record.className ?? ""}`.toLowerCase();
+      if (!haystack.includes(query)) return false;
+    }
+    return true;
+  });
+}
+
+function surveyRecordDetail(record, columnCount) {
+  const answerMap = new Map((record.answers ?? []).map((answer) => [answer.questionId, answer.score]));
+  const answers = h("div", { class: "answer-grid" }, SURVEY_QUESTIONS.map((question) => {
+    const score = answerMap.get(question.id);
+    return h("div", { class: `answer-item${Number.isFinite(Number(score)) ? "" : " missing"}` },
+      h("div", { class: "answer-head" }, h("strong", { text: question.id }), h("span", { text: Number.isFinite(Number(score)) ? `${score}/5` : "—" })),
+      h("div", { class: "muted small", text: question.text }));
+  }));
+  const openEntries = Object.entries(record.openAnswers ?? {}).filter(([, value]) => String(value ?? "").trim().length > 0);
+  const open = openEntries.length
+    ? h("ul", { class: "plain open-list" }, openEntries.map(([key, value]) => h("li", {},
+      h("strong", { text: `${OPEN_ANSWER_LABELS[key] ?? key}: ` }), value)))
+    : h("p", { class: "muted small", text: "Không có câu trả lời mở." });
+  return h("tr", { class: "detail-row", hidden: true },
+    h("td", { colspan: String(columnCount) },
+      h("div", { class: "detail-body" },
+        h("p", { class: "muted small", text: `Nhóm: ${record.profile?.studyGroup || "—"} · Khối: ${record.profile?.grade || "—"} · Giới tính: ${record.profile?.gender || "—"}` }),
+        h("h4", { text: "Câu trả lời 1–5" }), answers,
+        h("h4", { text: "Câu trả lời mở" }), open)));
+}
+
+function exportSurveyCsv(records) {
+  const headers = ["Họ tên", "Email", "Lớp", "Đợt", "Nhóm", "Khối", "Giới tính",
+    ...SURVEY_QUESTIONS.map((question) => question.id),
+    ...Object.values(OPEN_ANSWER_LABELS), "Thời điểm"];
+  const rows = records.map((record) => {
+    const answerMap = new Map((record.answers ?? []).map((answer) => [answer.questionId, answer.score]));
+    return [record.fullName, record.email, record.className ?? "", SURVEY_PHASE_LABELS[record.phase] ?? record.phase,
+      record.profile?.studyGroup ?? "", record.profile?.grade ?? "", record.profile?.gender ?? "",
+      ...SURVEY_QUESTIONS.map((question) => answerMap.get(question.id) ?? ""),
+      ...Object.keys(OPEN_ANSWER_LABELS).map((key) => record.openAnswers?.[key] ?? ""),
+      fmtDateTime(record.completedAt)];
+  });
+  const csv = statsCsv(headers, rows);
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = h("a", { href: url, download: `pop-ai-khao-sat-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.append(link); link.click(); link.remove();
+}
+
+function surveyRecordsCard(records) {
+  const filters = surveyFilters();
+  const phaseSelect = h("select", { id: "surveyPhase" },
+    [["", "Tất cả đợt"], ["PRE", "Trước thực nghiệm"], ["POST", "Sau thực nghiệm"]]
+      .map(([value, label]) => h("option", { value, text: label, selected: filters.phase === value })));
+  const searchInput = h("input", { id: "surveySearch", type: "text", value: filters.q, placeholder: "Tên, email hoặc lớp" });
+  const fromInput = h("input", { id: "surveyFrom", type: "date", value: filters.from });
+  const toInput = h("input", { id: "surveyTo", type: "date", value: filters.to });
+  const apply = () => {
+    const next = {
+      phase: phaseSelect.value, q: searchInput.value.trim(),
+      from: fromInput.value, to: toInput.value
+    };
+    if (next.from && next.to && next.from > next.to) return toast("Ngày bắt đầu không được sau ngày kết thúc.", true);
+    Object.assign(filters, next);
+    paintStats();
+  };
+  const filtered = filterSurveyRecords(records, filters);
+  const shown = filtered.slice(0, 300);
+  const columns = ["Người dùng", "Đợt", "Nhóm", "Khối", ...SURVEY_GROUPS, "Thời điểm"];
+  const body = shown.map((record) => {
+    const main = h("tr", { class: "clickable" },
+      h("td", {}, h("strong", { text: record.fullName ?? "—" }), h("div", { class: "muted small", text: `${record.email ?? ""}${record.className ? ` · ${record.className}` : ""}` })),
+      h("td", { class: "nowrap" }, h("span", { class: "pill", text: SURVEY_PHASE_LABELS[record.phase] ?? record.phase })),
+      h("td", { text: record.profile?.studyGroup || "—" }),
+      h("td", { text: record.profile?.grade || "—" }),
+      ...SURVEY_GROUPS.map((group) => h("td", { class: "num", text: fmtDec(record.scores?.[group]) })),
+      h("td", { class: "nowrap", text: fmtDateTime(record.completedAt) }));
+    const detail = surveyRecordDetail(record, columns.length);
+    main.addEventListener("click", () => { detail.hidden = !detail.hidden; });
+    return [main, detail];
+  });
+  const toolbar = h("div", { class: "row survey-toolbar" },
+    h("div", { class: "grow" }, h("label", { for: "surveySearch", text: "Tìm kiếm" }), searchInput),
+    h("div", {}, h("label", { for: "surveyPhase", text: "Đợt" }), phaseSelect),
+    h("div", {}, h("label", { for: "surveyFrom", text: "Từ ngày" }), fromInput),
+    h("div", {}, h("label", { for: "surveyTo", text: "Đến ngày" }), toInput),
+    h("button", { class: "secondary", type: "button", text: "Áp dụng", onclick: apply }),
+    h("button", { class: "ghost", type: "button", text: "Xóa lọc", onclick: () => {
+      Object.assign(filters, { phase: "", q: "", from: "", to: "" });
+      paintStats();
+    } }),
+    h("button", { class: "ghost", type: "button", text: "Xuất CSV", onclick: () => exportSurveyCsv(filtered) }));
+  return h("section", { class: "card chart-card" },
+    h("h3", { text: "Dữ liệu từng phiếu khảo sát" }),
+    h("p", { class: "muted small", text: `Hiển thị ${fmtNum(shown.length)}/${fmtNum(filtered.length)} phiếu sau lọc (tổng ${fmtNum(records.length)}). Nhấn một dòng để xem toàn bộ câu trả lời và phần trả lời mở.` }),
+    toolbar,
+    h("div", { class: "table-wrap" }, h("table", { class: "data" },
+      h("thead", {}, h("tr", {}, columns.map((label) => h("th", { text: label })))),
+      h("tbody", {}, body.length ? body.flat() : h("tr", {}, h("td", { colspan: String(columns.length), class: "empty", text: "Không có phiếu nào khớp bộ lọc." })))))
+  );
+}
+
+function surveyTab(st) {
+  const survey = st.surveys;
+  if (!survey) {
+    return h("div", { class: "stack" },
+      h("p", { class: "empty", text: st.surveyLoading ? "Đang tải dữ liệu khảo sát…" : "Chưa có dữ liệu khảo sát để hiển thị." }),
+      st.surveyError ? h("div", { class: "error", text: st.surveyError }) : null,
+      h("button", { class: "secondary", type: "button", text: "Tải lại dữ liệu khảo sát", disabled: st.surveyLoading, onclick: () => loadSurveyData() }));
+  }
+  const records = survey.records ?? [];
+  const stats = buildSurveyStats(records);
+  const totalUsers = st.overview?.users?.total ?? 0;
+  const avgRows = SURVEY_GROUPS.map((group) => ({
+    label: group,
+    title: GROUP_NAMES[group] ?? "Đánh giá mô hình",
+    values: [stats.averages.PRE[group], stats.averages.POST[group]]
+  }));
+  const questionRows = stats.perQuestion.map((question) => {
+    const pre = meanOf(question.PRE);
+    const post = meanOf(question.POST);
+    const delta = pre !== null && post !== null ? post - pre : null;
+    return h("tr", {},
+      h("td", { class: "nowrap" }, h("strong", { text: question.id })),
+      h("td", { text: question.text }),
+      h("td", { class: "num", text: pre === null ? "—" : fmtDec(pre) }),
+      h("td", { class: "num", text: post === null ? "—" : fmtDec(post) }),
+      h("td", { class: "num" }, delta === null ? "—" : h("span", {
+        class: delta === 0 ? "muted" : delta > 0 ? "delta-up" : "delta-down",
+        text: `${delta > 0 ? "+" : ""}${fmtDec(delta)}`
+      })),
+      h("td", { text: `${question.PRE.length}/${question.POST.length}` }),
+      h("td", {}, miniDistribution(question.POST.length ? question.POST : question.PRE)));
+  });
+  return h("div", { class: "stack" },
+    kpiRow(
+      kpi("Tổng phiếu", fmtNum(stats.total), `${fmtNum(stats.participants)} người tham gia`),
+      kpi("Phiếu trước", fmtNum(stats.phases.PRE), `${fmtNum(stats.preOnly)} người chỉ làm trước`),
+      kpi("Phiếu sau", fmtNum(stats.phases.POST), `${fmtNum(stats.postOnly)} người chỉ làm sau`),
+      kpi("Làm đủ 2 đợt", fmtNum(stats.both), fmtPct(stats.both, stats.participants || 0) + " người tham gia"),
+      kpi("Câu trả lời DG", fmtNum(stats.dgAnswers), "chỉ nhóm thực nghiệm"),
+      kpi("Người đã làm", fmtNum(stats.participants), totalUsers ? fmtPct(stats.participants, totalUsers) + " tổng người dùng" : "trên toàn hệ thống")),
+    grid(2,
+      card("Điểm trung bình trước và sau theo nhóm",
+        h("div", {}, groupedBarChart({ rows: avgRows, series: [{ name: "Trước", color: 0 }, { name: "Sau", color: 1 }], maxValue: 5, label: "Điểm trung bình trước và sau thực nghiệm theo nhóm" }),
+          legendLine([{ name: "Trước thực nghiệm", color: 0 }, { name: "Sau thực nghiệm", color: 1 }])),
+        "Thang 1–5. DG chỉ có ở phiếu sau của nhóm thực nghiệm."),
+      card("Số phiếu theo ngày",
+        stats.perDay.length
+          ? h("div", {}, lineChart({
+              labels: stats.perDay.map((row) => dayLabel(row.day)),
+              series: [{ name: "Trước", values: stats.perDay.map((row) => row.pre), color: 0 },
+                { name: "Sau", values: stats.perDay.map((row) => row.post), color: 1 }],
+              label: "Số phiếu khảo sát theo ngày"
+            }), legendLine([{ name: "Trước thực nghiệm", color: 0 }, { name: "Sau thực nghiệm", color: 1 }]))
+          : emptyNote(),
+        "Tính theo ngày địa phương của thời điểm nộp phiếu.")),
+    grid(2,
+      card("Nhóm thực nghiệm và đối chứng", donutChart({ data: stats.studyGroup, label: "Phân bố nhóm thực nghiệm và đối chứng" }),
+        "Theo thông tin người dùng khai trong phiếu sau."),
+      card("Phân bố theo khối lớp", hBarChart({ data: stats.grade, color: 2, unit: " phiếu", label: "Số phiếu theo khối lớp" }),
+        "Tổng hợp từ thông tin chung của phiếu.")),
+    h("section", { class: "card chart-card" },
+      h("h3", { text: "Thống kê từng câu hỏi" }),
+      h("p", { class: "muted small", text: "Điểm trung bình mỗi câu (1–5), chênh lệch sau − trước và phân bố mức trả lời. Số trong cột cuối là số lượt trả lời trước/sau." }),
+      h("div", { class: "table-wrap" }, h("table", { class: "data" },
+        h("thead", {}, h("tr", {}, ["Câu", "Nội dung", "TB trước", "TB sau", "Chênh lệch", "Lượt", "Phân bố"].map((label) => h("th", { text: label })))),
+        h("tbody", {}, questionRows)))),
+    surveyRecordsCard(records));
 }
 
 function focusTab(o, st) {
@@ -618,10 +930,11 @@ function paintStats() {
 
   let content;
   if (st.tab === "list") content = listTab();
+  else if (st.tab === "survey") content = surveyTab(st);
   else if (st.error) content = h("div", { class: "error", text: st.error });
   else if (!st.overview) content = h("p", { class: "empty", text: "Đang tải số liệu…" });
   else {
-    const builders = { overview: overviewTab, users: usersTab, assessment: assessmentTab, focus: focusTab, journal: journalTab, classes: classesTab };
+    const builders = { overview: overviewTab, users: usersTab, focus: focusTab, journal: journalTab, classes: classesTab };
     content = builders[st.tab](st.overview, st);
   }
   statsRoot.replaceChildren(header, tabs, h("div", { class: st.loading && st.overview ? "loading" : "" }, content));

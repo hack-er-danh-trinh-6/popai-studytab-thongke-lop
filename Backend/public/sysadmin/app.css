@@ -143,4 +143,19 @@ table.data .num { text-align: right; white-space: nowrap; }
 .pager .actions { margin: 0; }
 .row.card { align-items: end; }
 .survey-date-filter { align-items: end; }
+
+/* ---------- Khảo sát ---------- */
+.survey-toolbar { align-items: end; margin: .8rem 0; }
+.mini-dist { display: flex; height: 10px; min-width: 90px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.mini-dist span { display: block; height: 100%; }
+.delta-up { color: var(--ok); font-weight: 700; }
+.delta-down { color: var(--danger); font-weight: 700; }
+table.data tr.detail-row > td { background: var(--bg); }
+.detail-body { display: grid; gap: .6rem; padding: .3rem 0; }
+.detail-body h4 { margin: 0; font-size: .9rem; }
+.answer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .5rem; }
+.answer-item { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .6rem; background: var(--surface); }
+.answer-item.missing { opacity: .55; }
+.answer-head { display: flex; justify-content: space-between; gap: .5rem; font-size: .85rem; }
+.open-list li { margin-bottom: .4rem; }
 .stats-wrap h2 { margin-bottom: .2rem; }
