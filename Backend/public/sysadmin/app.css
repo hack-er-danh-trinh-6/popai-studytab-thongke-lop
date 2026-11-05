@@ -146,6 +146,9 @@ table.data .num { text-align: right; white-space: nowrap; }
 
 /* ---------- Khảo sát ---------- */
 .survey-toolbar { align-items: end; margin: .8rem 0; }
+.chart-export-actions { display: flex; justify-content: flex-end; margin-top: .75rem; }
+.chart-export { white-space: nowrap; }
+.chart-export:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .mini-dist { display: flex; height: 10px; min-width: 90px; border-radius: 4px; overflow: hidden; background: var(--line); }
 .mini-dist span { display: block; height: 100%; }
 .delta-up { color: var(--ok); font-weight: 700; }

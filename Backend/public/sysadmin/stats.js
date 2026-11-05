@@ -527,9 +527,116 @@ function groupedBarChart({ rows, series, maxValue = 5, format = fmtDec, label })
       }, tip(`${row.title ?? row.label} · ${item.name}: ${format(value)}`)));
     });
     svg.append(svgEl("text", { x: center, y: T + ih + 16, "text-anchor": "middle", class: "ax label", text: row.label }));
-    if (row.title) svg.append(svgEl("text", { x: center, y: T + ih + 32, "text-anchor": "middle", class: "ax", text: clip(row.title, 20) }));
   });
   return svg;
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text ?? "").split(/\s+/);
+  let line = "";
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(next).width > maxWidth) {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+      line = word;
+    } else line = next;
+  }
+  if (line) { ctx.fillText(line, x, y); y += lineHeight; }
+  return y;
+}
+
+function inlineSvgStyles(svg) {
+  const clone = svg.cloneNode(true);
+  const elements = [clone, ...clone.querySelectorAll("*")];
+  const originals = [svg, ...svg.querySelectorAll("*")];
+  const properties = ["fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "font-family", "font-size", "font-weight", "text-anchor", "opacity"];
+  elements.forEach((element, index) => {
+    if (!(element instanceof SVGElement)) return;
+    const original = originals[index];
+    if (!original) return;
+    const style = getComputedStyle(original);
+    properties.forEach((property) => {
+      const value = style.getPropertyValue(property);
+      if (value) element.style.setProperty(property, value);
+    });
+  });
+  clone.setAttribute("xmlns", SVG_NS);
+  return clone;
+}
+
+async function exportChartPng(svg, { title, explanation, filename }) {
+  if (!svg) return toast("Biểu đồ này chưa có dữ liệu để xuất.", true);
+  const cloned = inlineSvgStyles(svg);
+  const viewBox = (cloned.getAttribute("viewBox") || "0 0 640 220").split(/[ ,]+/).map(Number);
+  const sourceWidth = viewBox[2] || 640;
+  const sourceHeight = viewBox[3] || 220;
+  const width = 1440;
+  const margin = 64;
+  const chartWidth = width - margin * 2;
+  const scale = chartWidth / sourceWidth;
+  const chartHeight = Math.round(sourceHeight * scale);
+  const dpr = 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * dpr;
+  let ctx = canvas.getContext("2d");
+  if (!ctx) return toast("Trình duyệt không hỗ trợ xuất ảnh PNG.", true);
+  ctx.font = "600 22px system-ui, sans-serif";
+  const explanationLines = Math.max(1, Math.ceil(ctx.measureText(explanation).width / chartWidth));
+  const metadata = `Xuất lúc ${fmtDateTime(new Date().toISOString())} · Múi giờ: ${state.stats?.overview?.timeZone || "múi giờ thiết bị"}`;
+  const metadataLines = Math.max(1, Math.ceil(ctx.measureText(metadata).width / chartWidth));
+  const headerHeight = 178 + (explanationLines + metadataLines) * 34;
+  canvas.height = (headerHeight + chartHeight + margin) * dpr;
+  ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, canvas.height / dpr);
+  ctx.fillStyle = "#28243d";
+  ctx.font = "700 34px system-ui, sans-serif";
+  ctx.fillText(title, margin, 58);
+  ctx.fillStyle = "#5b5870";
+  ctx.font = "600 22px system-ui, sans-serif";
+  let textY = wrapCanvasText(ctx, explanation, margin, 102, chartWidth, 32);
+  ctx.font = "18px system-ui, sans-serif";
+  ctx.fillStyle = "#747187";
+  textY = wrapCanvasText(ctx, metadata, margin, textY + 8, chartWidth, 27);
+  const svgText = new XMLSerializer().serializeToString(cloned);
+  const svgUrl = URL.createObjectURL(new Blob([svgText], { type: "image/svg+xml;charset=utf-8" }));
+  const image = new Image();
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error("Không thể kết xuất biểu đồ SVG."));
+      image.src = svgUrl;
+    });
+    ctx.drawImage(image, margin, headerHeight, chartWidth, chartHeight);
+  } catch (error) {
+    console.error("PNG chart export failed", error);
+    return toast("Không xuất được biểu đồ PNG. Hãy thử lại bằng trình duyệt khác.", true);
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+  const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!pngBlob) return toast("Không tạo được tệp PNG.", true);
+  const pngUrl = URL.createObjectURL(pngBlob);
+  const link = h("a", { href: pngUrl, download: filename });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+}
+
+function chartCardPng(title, body, note, explanation, filename) {
+  const section = card(title, body, note);
+  const svg = section.querySelector("svg.chart, svg.donut");
+  const exportButton = h("button", {
+    class: "ghost chart-export", type: "button", text: "Xuất biểu đồ PNG",
+    disabled: !svg,
+    "aria-label": `Xuất biểu đồ ${title} thành PNG có chú giải`,
+    onclick: () => exportChartPng(svg, { title, explanation, filename })
+  });
+  section.append(h("div", { class: "chart-export-actions" }, exportButton));
+  return section;
 }
 
 function miniDistribution(counts) {
@@ -690,11 +797,13 @@ function surveyTab(st) {
       kpi("Câu trả lời DG", fmtNum(stats.dgAnswers), "chỉ nhóm thực nghiệm"),
       kpi("Người đã làm", fmtNum(stats.participants), totalUsers ? fmtPct(stats.participants, totalUsers) + " tổng người dùng" : "trên toàn hệ thống")),
     grid(2,
-      card("Điểm trung bình trước và sau theo nhóm",
+      chartCardPng("Điểm trung bình trước và sau theo nhóm",
         h("div", {}, groupedBarChart({ rows: avgRows, series: [{ name: "Trước", color: 0 }, { name: "Sau", color: 1 }], maxValue: 5, label: "Điểm trung bình trước và sau thực nghiệm theo nhóm" }),
           legendLine([{ name: "Trước thực nghiệm", color: 0 }, { name: "Sau thực nghiệm", color: 1 }])),
-        "Thang 1–5. DG chỉ có ở phiếu sau của nhóm thực nghiệm."),
-      card("Số phiếu theo ngày",
+        "Thang 1–5. DG chỉ có ở phiếu sau của nhóm thực nghiệm.",
+        "Mỗi cột là điểm trung bình các câu trong nhóm trên thang 1–5. So sánh cột xanh lá (sau) với tím (trước) để xem mức thay đổi mô tả; đây không tự chứng minh quan hệ nhân quả. Mã nhóm: VN = thói quen xem video ngắn; PT = phụ thuộc thiết bị số; PB = phân mảnh chú ý; TT = tập trung sâu; DG = đánh giá mô hình P.O.P (chỉ khảo sát sau, nhóm thực nghiệm).",
+        "popai-diem-trung-binh-truoc-sau.png"),
+      chartCardPng("Số phiếu theo ngày",
         stats.perDay.length
           ? h("div", {}, lineChart({
               labels: stats.perDay.map((row) => dayLabel(row.day)),
@@ -703,12 +812,18 @@ function surveyTab(st) {
               label: "Số phiếu khảo sát theo ngày"
             }), legendLine([{ name: "Trước thực nghiệm", color: 0 }, { name: "Sau thực nghiệm", color: 1 }]))
           : emptyNote(),
-        "Tính theo ngày địa phương của thời điểm nộp phiếu.")),
+        "Tính theo ngày địa phương của thời điểm nộp phiếu.",
+        "Trục ngang là ngày địa phương, trục dọc là số phiếu đã nộp. Đường tím biểu thị phiếu trước thực nghiệm; đường xanh lá biểu thị phiếu sau. Mỗi phiếu được đếm theo thời điểm hoàn tất được lưu trên hệ thống.",
+        "popai-so-phieu-theo-ngay.png")),
     grid(2,
-      card("Nhóm thực nghiệm và đối chứng", donutChart({ data: stats.studyGroup, label: "Phân bố nhóm thực nghiệm và đối chứng" }),
-        "Theo thông tin người dùng khai trong phiếu sau."),
-      card("Phân bố theo khối lớp", hBarChart({ data: stats.grade, color: 2, unit: " phiếu", label: "Số phiếu theo khối lớp" }),
-        "Tổng hợp từ thông tin chung của phiếu.")),
+      chartCardPng("Nhóm thực nghiệm và đối chứng", donutChart({ data: stats.studyGroup, label: "Phân bố nhóm thực nghiệm và đối chứng" }),
+        "Theo thông tin người dùng khai trong phiếu sau.",
+        "Biểu đồ thể hiện số phiếu theo nhóm thực nghiệm/đối chứng như người tham gia khai trong thông tin khảo sát. Đây là số phiếu, không phải số người duy nhất; một người có thể đóng góp phiếu ở hai đợt.",
+        "popai-nhom-thuc-nghiem-doi-chung.png"),
+      chartCardPng("Phân bố theo khối lớp", hBarChart({ data: stats.grade, color: 2, unit: " phiếu", label: "Số phiếu theo khối lớp" }),
+        "Tổng hợp từ thông tin chung của phiếu.",
+        "Mỗi thanh cho biết số phiếu được ghi nhận ở từng khối lớp theo thông tin người trả lời khai. Nhóm ‘Chưa chọn’ gồm phiếu không có thông tin khối lớp.",
+        "popai-phan-bo-khoi-lop.png")),
     h("section", { class: "card chart-card" },
       h("h3", { text: "Thống kê từng câu hỏi" }),
       h("p", { class: "muted small", text: "Điểm trung bình mỗi câu (1–5), chênh lệch sau − trước và phân bố mức trả lời. Số trong cột cuối là số lượt trả lời trước/sau." }),
