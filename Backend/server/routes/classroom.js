@@ -201,7 +201,8 @@ const notificationDto = (row) => ({
   id: row.id,
   title: row.title,
   body: row.body,
-  className: row.class_name,
+  className: row.class_name ?? "",
+  linkUrl: row.link_url ?? null,
   senderName: row.sender_name,
   kind: row.kind,
   createdAt: row.created_at.toISOString(),
@@ -209,11 +210,11 @@ const notificationDto = (row) => ({
 });
 
 const NOTIFICATION_SELECT = `
-  SELECT n.id, n.title, n.body, n.kind, n.created_at, c.name AS class_name,
+  SELECT n.id, n.title, n.body, n.kind, n.created_at, n.link_url, c.name AS class_name,
          sender.full_name AS sender_name, r.read_at
     FROM pop_notification_recipients r
     JOIN pop_notifications n ON n.id = r.notification_id
-    JOIN pop_classes c ON c.id = n.class_id
+    LEFT JOIN pop_classes c ON c.id = n.class_id
     LEFT JOIN pop_users sender ON sender.id = n.sender_id`;
 
 router.get("/notifications", ...studentOnly, async (req, res, next) => {
@@ -253,11 +254,11 @@ router.post("/notifications/deliver", ...studentOnly, async (req, res, next) => 
             )
         RETURNING notification_id
        )
-       SELECT n.id, n.title, n.body, n.kind, n.created_at, c.name AS class_name,
+       SELECT n.id, n.title, n.body, n.kind, n.created_at, n.link_url, c.name AS class_name,
               sender.full_name AS sender_name, NULL::timestamptz AS read_at
          FROM claimed
          JOIN pop_notifications n ON n.id = claimed.notification_id
-         JOIN pop_classes c ON c.id = n.class_id
+         LEFT JOIN pop_classes c ON c.id = n.class_id
          LEFT JOIN pop_users sender ON sender.id = n.sender_id
         ORDER BY n.created_at`,
       [req.user.id]

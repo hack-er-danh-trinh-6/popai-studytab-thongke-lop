@@ -2,7 +2,10 @@ package com.health.pop.ui.classroom
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -392,6 +395,7 @@ private fun ClassPicker(
 
 @Composable
 private fun InboxSection(items: List<ClassNotification>, c: PopPalette) {
+    val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         PopText("Thông báo từ giáo viên", c.text, 18, weight = FontWeight.Black)
         if (items.isEmpty()) {
@@ -433,6 +437,22 @@ private fun InboxSection(items: List<ClassNotification>, c: PopPalette) {
                     .filter { it.isNotBlank() }
                     .joinToString(" · ")
                 PopText(meta, c.textSoft, 12)
+                item.linkUrl?.let { url ->
+                    Spacer(Modifier.height(10.dp))
+                    PopText(
+                        "Mở App Hub để cập nhật →",
+                        PopPink,
+                        14,
+                        Modifier.clickable {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
+                        FontWeight.ExtraBold
+                    )
+                }
             }
         }
     }

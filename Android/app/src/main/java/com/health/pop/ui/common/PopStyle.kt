@@ -581,6 +581,7 @@ internal fun PopPage(
     modifier: Modifier = Modifier,
     heroActions: (@Composable RowScope.() -> Unit)? = null,
     mascotSize: Dp = 100.dp,
+    bodyOverlap: Dp = 28.dp,
     body: @Composable ColumnScope.() -> Unit,
 ) {
     PopLightStatusBarIcons()
@@ -647,7 +648,7 @@ internal fun PopPage(
 
         Column(
             Modifier
-                .overlapTop(28.dp)
+                .then(if (bodyOverlap > 0.dp) Modifier.overlapTop(bodyOverlap) else Modifier)
                 .graphicsLayer {
                     translationY = (1f - cardIn) * 90.dp.toPx()
                     alpha = cardIn.coerceIn(0f, 1f)

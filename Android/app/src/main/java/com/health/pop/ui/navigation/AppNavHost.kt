@@ -219,7 +219,8 @@ fun AppNavHost(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val currentUser by authRepository.currentUser.collectAsState()
-    val showBottomBar = currentRoute != Screen.Auth.route && currentUser != null
+    // Keep the survey full-height: the fixed tab bar can cover the last row of Likert choices.
+    val showBottomBar = currentRoute != Screen.Auth.route && currentRoute != Screen.Assessment.route && currentUser != null
     // currentRoute là null ở khung hình đầu tiên; lúc đó nếu chưa đăng nhập thì điểm đến chính là màn Auth.
     val isAuthFullBleed = currentRoute == Screen.Auth.route || (currentRoute == null && currentUser == null)
 

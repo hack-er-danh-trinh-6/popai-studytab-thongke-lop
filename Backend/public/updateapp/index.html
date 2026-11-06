@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>POP AI · Thông báo cập nhật app</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <h1>Thông báo cập nhật app</h1>
+        <p class="sub">Khi có bản mới, bấm nút để báo người dùng. Nhấn vào thông báo sẽ mở <code id="link-url">apphub-pop.onrender.com</code>.</p>
+      </div>
+      <button id="logout" class="ghost" hidden>Đăng xuất</button>
+    </header>
+
+    <section id="gate" class="card gate">
+      <h2>Đăng nhập admin</h2>
+      <p class="hint">Dùng mật khẩu admin hệ thống (<code>SYSTEM_ADMIN_PASSWORD</code>).</p>
+      <form id="gate-form" class="row">
+        <input id="gate-password" type="password" autocomplete="current-password" placeholder="Mật khẩu admin" required>
+        <button type="submit">Vào trang</button>
+      </form>
+      <p id="gate-error" class="error" hidden></p>
+    </section>
+
+    <div id="panel" hidden>
+      <section class="card">
+        <h2>Gửi thông báo cập nhật</h2>
+        <p class="hint">Gửi tới <strong id="user-count">0</strong> tài khoản học sinh. App hiện thông báo trong vài phút (30 giây khi đang mở, 15 phút khi đã đóng).</p>
+        <label for="version">Số phiên bản mới (tuỳ chọn)</label>
+        <input id="version" type="text" maxlength="30" placeholder="Ví dụ 1.4.0" autocomplete="off">
+        <div class="preview">
+          <strong id="preview-title"></strong>
+          <span id="preview-body"></span>
+        </div>
+        <div class="actions">
+          <button id="send" class="primary">🔔 Thông báo có bản cập nhật mới</button>
+        </div>
+        <p id="status" class="status" hidden></p>
+      </section>
+
+      <section class="card">
+        <h2>Lịch sử đã gửi</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Thời gian</th><th>Nội dung</th><th class="num">Người nhận</th><th class="num">Đã nhận</th><th class="num">Đã đọc</th></tr></thead>
+            <tbody id="history"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

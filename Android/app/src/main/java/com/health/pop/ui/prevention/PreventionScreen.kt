@@ -57,6 +57,9 @@ fun PreventionScreen(
     onStartAssessment: (AssessmentPhase) -> Unit
 ) {
     val history by viewModel.historyState.collectAsState()
+    val historyLoading by viewModel.historyLoading.collectAsState()
+    val historyLoaded by viewModel.historyLoaded.collectAsState()
+    val historyError by viewModel.historyError.collectAsState()
     val c = rememberPopPalette()
 
     PopPage(
@@ -91,18 +94,41 @@ fun PreventionScreen(
             PrevSectionHeader("📝", PopSun, "Hai đợt khảo sát nghiên cứu", c)
             Spacer(Modifier.height(12.dp))
             PopText(
-                "Phiếu trước thực nghiệm có 20 câu VN/PT/PB/TT. Phiếu sau thực nghiệm có 25 câu, thêm DG đánh giá hiệu quả mô hình P.O.P và POP-AI.",
+                "Phiếu trước gồm 20 câu. Phiếu sau gồm 20 câu chung; học sinh nhóm thực nghiệm trả lời thêm 5 câu đánh giá mô hình P.O.P và POP-AI.",
                 c.text,
                 15
             )
             Spacer(Modifier.height(16.dp))
-            PopButton(
-                text = "Làm phiếu trước thực nghiệm",
-                c = c,
-                onClick = { onStartAssessment(AssessmentPhase.PRE) }
-            )
-            Spacer(Modifier.height(10.dp))
-            PopButton(text = "Làm phiếu sau thực nghiệm", c = c, onClick = { onStartAssessment(AssessmentPhase.POST) })
+            when {
+                historyError != null -> {
+                    PopText(
+                        "Chưa kiểm tra được các phiếu đã làm. Hãy thử lại khi có mạng; phiếu sẽ bị khóa cho đến khi kiểm tra xong để tránh gửi trùng.",
+                        c.textSoft,
+                        13
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    PopButton(
+                        text = "Thử kiểm tra lại",
+                        c = c,
+                        loading = historyLoading,
+                        onClick = viewModel::loadHistory
+                    )
+                }
+                !historyLoaded -> {
+                    PopText("Đang kiểm tra lịch sử khảo sát của bạn…", c.textSoft, 14, weight = FontWeight.Bold)
+                }
+                else -> {
+                    val preCompleted = history.any { it.phase == AssessmentPhase.PRE }
+                    val postCompleted = history.any { it.phase == AssessmentPhase.POST }
+                    SurveyPhaseButton("Làm phiếu trước thực nghiệm", preCompleted, c) {
+                        onStartAssessment(AssessmentPhase.PRE)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    SurveyPhaseButton("Làm phiếu sau thực nghiệm", postCompleted, c) {
+                        onStartAssessment(AssessmentPhase.POST)
+                    }
+                }
+            }
         }
 
         // Lịch sử đánh giá
@@ -145,6 +171,32 @@ fun PreventionScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SurveyPhaseButton(
+    text: String,
+    completed: Boolean,
+    c: PopPalette,
+    onClick: () -> Unit
+) {
+    if (completed) {
+        StickerCard(c, contentPadding = 16.dp) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                PopText("✓", PopMint, 20, weight = FontWeight.Black)
+                Spacer(Modifier.width(10.dp))
+                PopText(
+                    "$text — đã hoàn thành, không thể làm lại",
+                    c.textSoft,
+                    14,
+                    Modifier.weight(1f),
+                    FontWeight.Bold
+                )
+            }
+        }
+    } else {
+        PopButton(text = text, c = c, onClick = onClick)
     }
 }
 

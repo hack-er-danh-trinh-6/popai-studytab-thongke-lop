@@ -31,6 +31,7 @@ data class ClassNotificationDto(
     val body: String? = null,
     val className: String? = null,
     val senderName: String? = null,
+    val linkUrl: String? = null,
     val createdAt: String? = null,
     val read: Boolean = false
 )

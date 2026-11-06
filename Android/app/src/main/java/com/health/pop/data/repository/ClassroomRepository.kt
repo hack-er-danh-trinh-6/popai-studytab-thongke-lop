@@ -184,7 +184,8 @@ class ClassroomRepository(private val tokenManager: TokenManager) {
             className = className.orEmpty(),
             senderName = senderName.orEmpty(),
             createdAt = createdAt.orEmpty(),
-            read = read
+            read = read,
+            linkUrl = linkUrl?.takeIf { it.startsWith("https://") }
         )
     }
 }

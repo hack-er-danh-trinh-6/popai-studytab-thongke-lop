@@ -7,6 +7,7 @@ import classroomRoutes from "./routes/classroom.js";
 import teacherRoutes from "./routes/teacher.js";
 import sysadminRoutes from "./routes/sysadmin.js";
 import adminbotRoutes from "./routes/adminbot.js";
+import updateAppRoutes from "./routes/updateapp.js";
 import { startTimetableScheduler } from "./timetableService.js";
 import { startKeepAlive } from "./keepAlive.js";
 
@@ -17,6 +18,7 @@ const mediaDir = fileURLToPath(new URL("../media", import.meta.url));
 const adminDir = fileURLToPath(new URL("../public/admin", import.meta.url));
 const sysadminDir = fileURLToPath(new URL("../public/sysadmin", import.meta.url));
 const adminbotDir = fileURLToPath(new URL("../public/adminbot", import.meta.url));
+const updateAppDir = fileURLToPath(new URL("../public/updateapp", import.meta.url));
 let stopScheduler = () => {};
 let stopKeepAlive = () => {};
 let schemaReady = false;
@@ -81,6 +83,17 @@ app.use("/adminbot", (_req, res, next) => {
   next();
 }, express.static(adminbotDir, { index: "index.html", dotfiles: "ignore" }));
 
+// Trang thông báo cập nhật app: admin bấm nút để báo người dùng có phiên bản mới (mở App Hub khi nhấn thông báo).
+app.use("/updateapp", (_req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; " +
+    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  );
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+}, express.static(updateAppDir, { index: "index.html", dotfiles: "ignore" }));
+
 const requireSchema = (_req, res, next) => {
   if (!schemaReady) return res.status(503).json({ message: "Máy chủ đang khởi động. Vui lòng thử lại." });
   return next();
@@ -89,10 +102,12 @@ app.use("/api/mobile/v1", requireSchema);
 app.use("/api/teacher/v1", requireSchema);
 app.use("/api/admin/v1", requireSchema);
 app.use("/api/adminbot/v1", requireSchema);
+app.use("/api/updateapp/v1", requireSchema);
 app.use("/api/mobile/v1/auth", authRoutes);
 app.use("/api/teacher/v1", teacherRoutes);
 app.use("/api/admin/v1", sysadminRoutes);
 app.use("/api/adminbot/v1", adminbotRoutes);
+app.use("/api/updateapp/v1", updateAppRoutes);
 app.use("/api/mobile/v1", classroomRoutes);
 app.use("/api/mobile/v1", popRoutes);
 app.use((_req, res) => res.status(404).json({ message: "Không tìm thấy API." }));

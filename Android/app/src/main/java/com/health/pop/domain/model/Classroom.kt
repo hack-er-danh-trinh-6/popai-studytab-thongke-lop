@@ -29,7 +29,9 @@ data class ClassNotification(
     val className: String,
     val senderName: String,
     val createdAt: String,
-    val read: Boolean
+    val read: Boolean,
+    /** Liên kết https mở khi nhấn thông báo (ví dụ thông báo có bản cập nhật mới); null nếu không có. */
+    val linkUrl: String? = null
 )
 
 data class ClassInbox(

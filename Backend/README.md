@@ -117,3 +117,12 @@ File nhạc nằm ở `media/focus-music.mp3`, phục vụ có hỗ trợ `Range
 ## Chống spin down trên Render (free tier)
 
 `server/keepAlive.js` tự gọi `GET /healthz` mỗi 10 phút khi có `RENDER_EXTERNAL_URL` (Render tự đặt). Biến tùy chọn: `KEEP_ALIVE=off` để tắt, `KEEP_ALIVE_URL` để ghi đè URL, `KEEP_ALIVE_INTERVAL_MS` (tối thiểu 60000). Self-ping không đánh thức được server đã ngủ, nên nên đặt thêm UptimeRobot/cron-job.org ping `/healthz` mỗi 5-10 phút.
+
+## Thông báo cập nhật app (`/updateapp`)
+
+Migration `007_app_update_notifications.sql` cho phép thông báo không thuộc lớp nào (`class_id` null) và thêm cột `link_url`.
+
+- Trang web: `/updateapp`. Đăng nhập bằng `SYSTEM_ADMIN_PASSWORD` (dùng chung phiên với `/sysadmin`). Khi có bản mới, admin (tuỳ chọn nhập số phiên bản) bấm **Thông báo có bản cập nhật mới** → tạo một thông báo gửi tới mọi tài khoản học sinh, kèm lịch sử và số người đã nhận/đã đọc.
+- API (`/api/updateapp/v1`, Bearer token admin): `POST /login`, `GET /status`, `POST /send` (tối đa 5 lần/giờ).
+- Liên kết mở khi nhấn thông báo mặc định `https://apphub-pop.onrender.com`; đổi bằng biến môi trường `APP_HUB_URL` (chỉ nhận `https://`). Liên kết do server quyết định, không nhận từ trình duyệt.
+- App Android: `GET /notifications` và `/notifications/deliver` trả thêm `linkUrl`; nhấn thông báo điện thoại (hoặc nút "Mở App Hub để cập nhật" trong hộp thư) sẽ mở trình duyệt tới liên kết đó.

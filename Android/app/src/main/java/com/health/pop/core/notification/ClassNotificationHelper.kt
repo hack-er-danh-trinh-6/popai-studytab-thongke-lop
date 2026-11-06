@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -27,6 +28,15 @@ object ClassNotificationHelper {
             }
         )
     }
+
+    /** Nhấn thông báo có liên kết (vd. bản cập nhật mới) thì mở trình duyệt tới App Hub. */
+    private fun openLink(context: Context, item: ClassNotification, url: String): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            item.id.hashCode(),
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
 
     fun canNotify(context: Context): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
 
@@ -54,7 +64,7 @@ object ClassNotificationHelper {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(item.body))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setContentIntent(openApp)
+                .setContentIntent(item.linkUrl?.let { openLink(context, item, it) } ?: openApp)
                 .setAutoCancel(true)
                 .build()
             manager.notify(item.id.hashCode(), notification)

@@ -35,7 +35,8 @@ const MIGRATIONS = [
   { version: "003_timetable", file: "./migrations/003_timetable.sql" },
   { version: "004_timetable_1930", file: "./migrations/004_timetable_1930.sql" },
   { version: "005_survey_phases", file: "./migrations/005_survey_phases.sql" },
-  { version: "006_one_submission_per_phase", file: "./migrations/006_one_submission_per_phase.sql" }
+  { version: "006_one_submission_per_phase", file: "./migrations/006_one_submission_per_phase.sql" },
+  { version: "007_app_update_notifications", file: "./migrations/007_app_update_notifications.sql" }
 ];
 
 export async function runMigrations() {
