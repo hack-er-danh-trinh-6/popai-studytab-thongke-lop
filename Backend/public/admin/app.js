@@ -24,6 +24,7 @@ const state = {
   students: null,
   analytics: null,
   surveyAnalytics: null,
+  usage: null,
   selectedStudentId: null,
   studentDetail: null,
   history: []
@@ -99,7 +100,7 @@ async function api(path, { method = "GET", body, gate = false, auth = true } = {
 }
 
 function clearSession({ keepGate = false } = {}) {
-  state.token = null; state.user = null; state.classes = []; state.students = null; state.analytics = null; state.surveyAnalytics = null;
+  state.token = null; state.user = null; state.classes = []; state.students = null; state.analytics = null; state.surveyAnalytics = null; state.usage = null;
   store.remove("pop_token");
   if (!keepGate) {
     state.gateToken = null; state.gateExpiresAt = 0;
@@ -237,6 +238,8 @@ async function loadTab() {
         if (state.selectedStudentId) await loadStudentDetail(state.selectedStudentId, false);
       } else if (state.tab === "analytics") {
         state.analytics = await api(`/classes/${klass.id}/analytics?days=${state.days}&timeZone=${encodeURIComponent(TIME_ZONE)}`);
+      } else if (state.tab === "usage") {
+        state.usage = await api(`/classes/${klass.id}/usage?days=${state.days}&timeZone=${encodeURIComponent(TIME_ZONE)}`);
       } else if (state.tab === "survey") {
         state.surveyAnalytics = await api(`/classes/${klass.id}/assessment-analytics`);
       } else if (state.tab === "notifications") {
@@ -316,11 +319,13 @@ function renderDashboard() {
         h("div", { class: "tabs", role: "tablist" },
           tabButton("requests", "Duyệt học sinh", klass.pendingCount),
           tabButton("analytics", "Thống kê lớp"),
+          tabButton("usage", "TikTok & YouTube"),
           tabButton("survey", "Khảo sát"),
           tabButton("students", "Thói quen tập trung"),
           tabButton("notifications", "Thông báo")),
         state.tab === "requests" ? renderRequests(klass)
           : state.tab === "analytics" ? renderAnalytics(klass)
+            : state.tab === "usage" ? renderUsage()
             : state.tab === "survey" ? renderSurveyAnalytics()
             : state.tab === "students" ? renderStudents(klass)
               : renderNotifications(klass)));
@@ -509,6 +514,61 @@ function renderAnalytics(klass) {
     h("div", { class: "grid2" }, hourCard, levelCard),
     h("div", { class: "grid2" }, ratingCard, top),
     attention);
+}
+
+// ----- tab: TikTok & YouTube -----
+function renderUsage() {
+  const data = state.usage;
+  if (!data) return h("div", { class: "empty", text: "Đang tải…" });
+  const period = h("select", { id: "period", "aria-label": "Khoảng thời gian", onchange: async (e) => {
+    state.days = Number(e.target.value); state.usage = null; await loadTab();
+  } }, [7, 14, 30].map((d) => h("option", { value: d, selected: d === state.days, text: `${d} ngày gần nhất` })));
+  const intro = h("div", { class: "row", style: "margin-top:.75rem; justify-content: space-between" },
+    h("p", { class: "muted small", style: "margin:0", text: "Thời gian mở TikTok và YouTube trên điện thoại học sinh (do app POP AI gửi lên khi học sinh bật theo dõi)." }), period);
+  const sm = data.summary;
+  if (sm.studentCount === 0) {
+    return h("div", {}, intro, h("div", { class: "empty", text: "Lớp chưa có học sinh nào được duyệt nên chưa có thống kê." }));
+  }
+  if (sm.reportingStudents === 0) {
+    return h("div", {}, intro, h("div", { class: "empty", text: "Chưa có học sinh nào gửi dữ liệu. Học sinh cần bật theo dõi thời gian dùng ứng dụng trong app." }));
+  }
+
+  const cards = h("div", { class: "stats", style: "margin-top:.75rem" },
+    stat(fmtMinutes(sm.tiktokMinutes), "Tổng thời gian TikTok"),
+    stat(fmtMinutes(sm.youtubeMinutes), "Tổng thời gian YouTube"),
+    stat(`${sm.tiktokAvgPerStudentPerDay} phút`, "TikTok / học sinh / ngày"),
+    stat(`${sm.youtubeAvgPerStudentPerDay} phút`, "YouTube / học sinh / ngày"),
+    stat(`${sm.reportingStudents}/${sm.studentCount}`, "Học sinh có dữ liệu"));
+
+  const label = (d) => d.date.slice(8, 10) + "/" + d.date.slice(5, 7);
+  const dailyCard = (title, key) => h("div", { class: "card inner" },
+    h("h3", { text: title }),
+    barChart(data.daily.map((d) => ({ label: label(d), value: d[key], title: `${d.date}: ${d[key]} phút` })),
+      { ariaLabel: title, showValues: data.daily.length <= 14 }));
+
+  const split = h("div", { class: "card inner" },
+    h("h3", { text: "So sánh cả lớp" }),
+    hbars([
+      { label: "🎵 TikTok", count: sm.tiktokMinutes },
+      { label: "▶️ YouTube", count: sm.youtubeMinutes }
+    ], sm.totalMinutes));
+
+  const rows = data.students.map((s) => h("tr", {},
+    h("td", { text: s.fullName }),
+    h("td", { text: s.reportedDays ? fmtMinutes(s.tiktok) : "—" }),
+    h("td", { text: s.reportedDays ? fmtMinutes(s.youtube) : "—" }),
+    h("td", {}, h("strong", { text: s.reportedDays ? fmtMinutes(s.totalMinutes) : "—" })),
+    h("td", { text: s.reportedDays ? `${s.reportedDays}/${data.days}` : "Chưa gửi" }),
+    h("td", { text: timeAgo(s.lastReport) })));
+  const table = h("div", { class: "card inner" },
+    h("h3", { text: "Từng học sinh (nhiều nhất lên đầu)" }),
+    h("div", { class: "table-wrap" }, h("table", {},
+      h("thead", {}, h("tr", {}, ["Học sinh", "TikTok", "YouTube", "Tổng", "Số ngày có dữ liệu", "Gửi lần cuối"].map((x) => h("th", { text: x })))),
+      h("tbody", {}, rows))));
+
+  return h("div", {}, intro, cards, split,
+    h("div", { class: "grid2" }, dailyCard("TikTok mỗi ngày (phút, cả lớp)", "tiktok"), dailyCard("YouTube mỗi ngày (phút, cả lớp)", "youtube")),
+    table);
 }
 
 // ----- tab: khảo sát trước/sau thực nghiệm -----

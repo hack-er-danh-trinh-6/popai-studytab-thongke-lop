@@ -15,7 +15,10 @@ class UsageTrackerWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        UsageTracker.check(applicationContext)
+        val snapshot = UsageTracker.check(applicationContext)
+        if (snapshot != null) {
+            try { UsageUploader.maybeUpload(applicationContext, snapshot) } catch (_: Exception) { /* thử lại ở lần sau */ }
+        }
         return Result.success()
     }
 

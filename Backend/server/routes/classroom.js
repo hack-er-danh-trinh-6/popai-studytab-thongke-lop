@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import { query } from "../db.js";
 import { isUuid, nameKey } from "../classroomDomain.js";
 import { requireAuth } from "../security.js";
+import { parseUsageUpload } from "../usageDomain.js";
 
 // Router này được gắn vào /api/mobile/v1 trước popRoutes, nên mỗi route tự yêu cầu đăng nhập.
 const router = Router();
@@ -286,6 +287,35 @@ router.post("/notifications/read", ...studentOnly, async (req, res, next) => {
       `UPDATE pop_notification_recipients SET read_at = NOW()
         WHERE user_id = $1 AND read_at IS NULL AND notification_id = ANY($2::uuid[])`,
       [req.user.id, ids]
+    );
+    return res.status(204).end();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+const usageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user.id,
+  message: { message: "Bạn gửi dữ liệu quá nhiều lần. Vui lòng thử lại sau." }
+});
+
+// Máy học sinh gửi số phút dùng TikTok/YouTube theo ngày (ghi đè giá trị cũ của cùng ngày).
+router.post("/usage/daily", ...studentOnly, usageLimiter, async (req, res, next) => {
+  try {
+    const parsed = parseUsageUpload(req.body);
+    if (parsed.error) return res.status(400).json({ message: parsed.error });
+    const { entries } = parsed;
+    await query(
+      `INSERT INTO pop_app_usage (user_id, usage_date, app_key, minutes, updated_at)
+       SELECT $1, e.d::date, e.a, e.m, NOW()
+         FROM unnest($2::text[], $3::text[], $4::int[]) AS e(d, a, m)
+       ON CONFLICT (user_id, usage_date, app_key)
+       DO UPDATE SET minutes = EXCLUDED.minutes, updated_at = NOW()`,
+      [req.user.id, entries.map((e) => e.date), entries.map((e) => e.app), entries.map((e) => e.minutes)]
     );
     return res.status(204).end();
   } catch (error) {

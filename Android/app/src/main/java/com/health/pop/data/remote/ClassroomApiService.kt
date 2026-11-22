@@ -39,4 +39,7 @@ interface ClassroomApiService {
 
     @POST("api/mobile/v1/notifications/read")
     suspend fun markRead(@Body request: MarkReadRequestDto): Response<Unit>
+
+    @POST("api/mobile/v1/usage/daily")
+    suspend fun uploadUsage(@Body request: UploadUsageRequestDto): Response<Unit>
 }

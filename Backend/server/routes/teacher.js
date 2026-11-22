@@ -12,6 +12,7 @@ import { createSession, requireAuth, requireTeacher, toUserDto } from "../securi
 import {
   attentionList, fillHours, fillRatings, levelDistribution, summarize, topStudents
 } from "../classAnalyticsDomain.js";
+import { fillUsageDays, rankByUsage, summarizeUsage } from "../usageDomain.js";
 
 const router = Router();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -485,6 +486,69 @@ router.get("/classes/:classId/students/:userId/focus", ...teacherOnly, async (re
 // ---------------------------------------------------------------------------
 // Kết quả hai phiếu khảo sát của học sinh trong lớp do giáo viên phụ trách.
 // ---------------------------------------------------------------------------
+// Thống kê thời gian dùng TikTok/YouTube của học sinh trong lớp (dữ liệu do app học sinh gửi lên).
+router.get("/classes/:classId/usage", ...teacherOnly, async (req, res, next) => {
+  try {
+    const klass = await loadOwnedClass(req, res);
+    if (!klass) return;
+    const days = parseDays(req.query.days);
+    if (days === null) return res.status(400).json({ message: "days phải nằm trong khoảng từ 1 đến 90." });
+    const timeZone = validateTimeZone(req.query.timeZone);
+    if (timeZone === null) return res.status(400).json({ message: "timeZone không hợp lệ." });
+    const endRow = await query(`SELECT (NOW() AT TIME ZONE $1)::date::text AS today`, [timeZone]);
+    const today = endRow.rows[0].today;
+
+    const perStudent = await query(
+      `SELECT u.id, u.full_name, u.email,
+              COALESCE(SUM(a.minutes) FILTER (WHERE a.app_key = 'tiktok'), 0)::int AS tiktok,
+              COALESCE(SUM(a.minutes) FILTER (WHERE a.app_key = 'youtube'), 0)::int AS youtube,
+              COUNT(DISTINCT a.usage_date)::int AS reported_days,
+              MAX(a.updated_at) AS last_report
+         FROM pop_class_members m
+         JOIN pop_users u ON u.id = m.user_id
+         LEFT JOIN pop_app_usage a
+                ON a.user_id = u.id
+               AND a.usage_date > $2::date - $3::int
+               AND a.usage_date <= $2::date
+        WHERE m.class_id = $1 AND m.status = 'APPROVED'
+        GROUP BY u.id
+        ORDER BY u.full_name`,
+      [klass.id, today, days]
+    );
+    const students = perStudent.rows.map((row) => ({
+      userId: row.id,
+      fullName: row.full_name,
+      email: row.email,
+      tiktok: row.tiktok,
+      youtube: row.youtube,
+      reportedDays: row.reported_days,
+      lastReport: row.last_report ? row.last_report.toISOString() : null
+    }));
+
+    const perDay = await query(
+      `SELECT a.usage_date::text AS date,
+              COALESCE(SUM(a.minutes) FILTER (WHERE a.app_key = 'tiktok'), 0)::int AS tiktok,
+              COALESCE(SUM(a.minutes) FILTER (WHERE a.app_key = 'youtube'), 0)::int AS youtube
+         FROM pop_class_members m
+         JOIN pop_app_usage a ON a.user_id = m.user_id
+        WHERE m.class_id = $1 AND m.status = 'APPROVED'
+          AND a.usage_date > $2::date - $3::int AND a.usage_date <= $2::date
+        GROUP BY a.usage_date`,
+      [klass.id, today, days]
+    );
+
+    return res.json({
+      days,
+      class: { id: klass.id, name: klass.name, schoolName: klass.school_name },
+      summary: summarizeUsage(students, days),
+      daily: fillUsageDays(perDay.rows, today, days),
+      students: rankByUsage(students)
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get("/classes/:classId/assessment-analytics", ...teacherOnly, async (req, res, next) => {
   try {
     const klass = await loadOwnedClass(req, res);

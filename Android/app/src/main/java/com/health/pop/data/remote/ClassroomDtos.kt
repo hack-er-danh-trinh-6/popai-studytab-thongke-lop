@@ -70,3 +70,13 @@ data class TimetableDto(
     val className: String? = null,
     val entries: List<TimetableEntryDto>? = null
 )
+
+data class UsageEntryDto(
+    val date: String,
+    val app: String,
+    val minutes: Int
+)
+
+data class UploadUsageRequestDto(
+    val entries: List<UsageEntryDto>
+)

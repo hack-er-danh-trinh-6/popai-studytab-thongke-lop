@@ -8,6 +8,8 @@ import com.health.pop.data.remote.ClassNotificationDto
 import com.health.pop.data.remote.ClassroomApiService
 import com.health.pop.data.remote.JoinClassRequestDto
 import com.health.pop.data.remote.MarkReadRequestDto
+import com.health.pop.data.remote.UploadUsageRequestDto
+import com.health.pop.data.remote.UsageEntryDto
 import com.health.pop.data.remote.apiErrorMessage
 import com.health.pop.data.remote.classroomErrorMessage
 import com.health.pop.domain.model.ClassInbox
@@ -151,6 +153,12 @@ class ClassroomRepository(private val tokenManager: TokenManager) {
         val response = api.markRead(MarkReadRequestDto(all = true))
         if (response.isSuccessful) ApiResult.Success(Unit)
         else response.classroomError("Không thể cập nhật thông báo.")
+    }
+
+    /** Gửi số phút dùng TikTok/YouTube theo ngày để giáo viên xem thống kê lớp. */
+    suspend fun uploadUsage(entries: List<UsageEntryDto>): ApiResult<Unit> = call("Không thể gửi thống kê.") {
+        val response = api.uploadUsage(UploadUsageRequestDto(entries))
+        if (response.isSuccessful) ApiResult.Success(Unit) else response.classroomError("Không thể gửi thống kê.")
     }
 
     private suspend fun <T> call(defaultError: String, block: suspend () -> ApiResult<T>): ApiResult<T> {

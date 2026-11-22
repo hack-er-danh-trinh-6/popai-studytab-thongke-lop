@@ -52,7 +52,10 @@ class UsageTrackerService : Service() {
                         stopSelf()
                         break
                     }
-                    UsageTracker.check(applicationContext)
+                    val snapshot = UsageTracker.check(applicationContext)
+                    if (snapshot != null) {
+                        try { UsageUploader.maybeUpload(applicationContext, snapshot) } catch (_: Exception) { /* thử lại ở lần sau */ }
+                    }
                     delay(CHECK_INTERVAL_MS)
                 }
             }
