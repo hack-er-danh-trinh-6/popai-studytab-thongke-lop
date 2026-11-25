@@ -7,6 +7,7 @@ import {
 } from "../timetableDomain.js";
 import { loadSettings, saveSettings, schoolTimeZone, sendDailyTimetable } from "../timetableService.js";
 import { parseRange, parseUserListQuery } from "../statsDomain.js";
+import dbAdminRoutes from "./dbadmin.js";
 import { listUsers, loadOverview, loadSurveyOverview, loadUserDetail } from "../statsService.js";
 
 // API của trang admin hệ thống (/sysadmin). Tách hoàn toàn khỏi API giáo viên: mật khẩu riêng SYSTEM_ADMIN_PASSWORD.
@@ -51,6 +52,8 @@ function requireAdmin(req, res, next) {
   return next();
 }
 router.use(requireAdmin);
+// Quản lý dữ liệu database (xem/thêm/sửa/xóa) cho mọi bảng trong schema public.
+router.use("/db", dbAdminRoutes);
 
 const classDto = (row) => ({
   id: row.id,

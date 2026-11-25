@@ -250,14 +250,17 @@ fun AppNavHost(
     val focusSession by focusRepository.currentSession.collectAsState()
     val focusLocked = currentUser != null && focusSession.state == FocusSessionState.RUNNING
     var leftAppWhileFocusing by remember { mutableStateOf(false) }
+    // Khi đang tập trung vẫn cho mở tab Học tập (và AI Giáo sư bài tập) để học sinh hỏi gia sư;
+    // đồng hồ vẫn tiếp tục chạy. Các màn khác vẫn bị khoá.
+    val focusAllowedRoutes = setOf(Screen.Focus.route, Screen.Study.route, Screen.HomeworkAI.route)
     val showFocusOverlay = focusLocked &&
         currentRoute != null &&
-        (leftAppWhileFocusing || currentRoute != Screen.Focus.route)
+        (leftAppWhileFocusing || currentRoute !in focusAllowedRoutes)
 
     val showFocusLockedToast = {
         Toast.makeText(
             context,
-            "Đang trong thời gian tập trung. Hãy tạm dừng hoặc hoàn thành phiên để rời màn hình này.",
+            "Đang trong thời gian tập trung. Bạn chỉ có thể dùng tab Học tập để hỏi gia sư; hãy tạm dừng hoặc hoàn thành phiên để mở mục khác.",
             Toast.LENGTH_SHORT
         ).show()
     }
@@ -338,8 +341,8 @@ fun AppNavHost(
                             currentRoute = currentRoute,
                             locked = focusLocked,
                             onNavigate = { screen ->
-                                // Đang tập trung: chỉ cho phép về tab Tập trung; các tab/nút khác chỉ nhắc đang bị khoá.
-                                if (!focusLocked || screen.route == Screen.Focus.route) {
+                                // Đang tập trung: chỉ cho phép tab Tập trung và Học tập; các tab/nút khác chỉ nhắc đang bị khoá.
+                                if (!focusLocked || screen.route == Screen.Focus.route || screen.route == Screen.Study.route) {
                                     navController.navigateToMainTab(screen.route)
                                 } else {
                                     showFocusLockedToast()
@@ -470,8 +473,12 @@ fun AppNavHost(
                             viewModel = vm,
                             isStudent = isStudent,
                             onOpenClassroom = {
-                                classSetupOnboarding = false
-                                navController.navigate(Screen.Classroom.route) { launchSingleTop = true }
+                                if (focusLocked) {
+                                    showFocusLockedToast()
+                                } else {
+                                    classSetupOnboarding = false
+                                    navController.navigate(Screen.Classroom.route) { launchSingleTop = true }
+                                }
                             },
                             onOpenHomeworkAi = {
                                 navController.navigate(Screen.HomeworkAI.route) { launchSingleTop = true }
@@ -544,7 +551,14 @@ fun AppNavHost(
 
             // Đăng ký SAU NavHost để được ưu tiên hơn handler Back của NavHost: chặn Back (kể cả Back để
             // thoát ứng dụng) trong lúc đồng hồ chạy.
-            BackHandler(enabled = focusLocked) { showFocusLockedToast() }
+            BackHandler(enabled = focusLocked) {
+                when (currentRoute) {
+                    // Từ AI Giáo sư bài tập lùi về tab Học tập, từ Học tập về lại đồng hồ tập trung.
+                    Screen.HomeworkAI.route -> navController.navigateToMainTab(Screen.Study.route)
+                    Screen.Study.route -> navController.navigateToMainTab(Screen.Focus.route)
+                    else -> showFocusLockedToast()
+                }
+            }
 
             // Đặt cuối cùng để nằm trên mọi màn hình và chặn mọi thao tác bên dưới.
             FocusLockOverlay(

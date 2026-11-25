@@ -162,3 +162,33 @@ table.data tr.detail-row > td { background: var(--bg); }
 .answer-head { display: flex; justify-content: space-between; gap: .5rem; font-size: .85rem; }
 .open-list li { margin-bottom: .4rem; }
 .stats-wrap h2 { margin-bottom: .2rem; }
+
+/* ---------- Quản lý dữ liệu ---------- */
+.db-page .layout { max-width: 1600px; }
+.db-toolbar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin: .4rem 0 .8rem; }
+.db-toolbar .grow { flex: 1 1 220px; }
+.db-toolbar select { width: auto; }
+.db-null { color: var(--muted); font-style: italic; font-size: .8rem; }
+.db-val { white-space: pre-wrap; overflow-wrap: break-word; }
+.db-pk { font-size: .75rem; }
+.db-check { width: 2.2rem; text-align: center; }
+.db-check input { width: auto; }
+.db-actions { white-space: nowrap; }
+.db-actions button + button { margin-left: .3rem; }
+.small-btn { padding: .2rem .55rem; font-size: .8rem; }
+tr.db-selected td { background: var(--primary-soft); }
+.is-loading { opacity: .6; }
+button.danger-solid { background: var(--danger); color: #fff; }
+button.danger-solid:hover { background: var(--danger); filter: brightness(.9); }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(20, 20, 40, .55); display: grid; place-items: center; padding: 1rem; z-index: 20; overflow: auto; }
+.modal { width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; }
+.db-fields { display: grid; gap: .2rem; }
+.db-field label { display: block; }
+.db-type { font-weight: 400; font-size: .75rem; color: var(--muted); margin-right: .3rem; }
+.db-input-row { display: flex; gap: .5rem; align-items: start; }
+.db-input-row > input, .db-input-row > select, .db-input-row > textarea { flex: 1 1 auto; }
+.db-flags { display: flex; gap: 1rem; flex-wrap: wrap; }
+.check.small { font-size: .8rem; margin: .2rem 0 0; font-weight: 400; color: var(--muted); }
+textarea { width: 100%; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); font: .85rem ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
+textarea:disabled { opacity: .45; }
+select:disabled { opacity: .45; }

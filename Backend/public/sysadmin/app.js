@@ -23,8 +23,9 @@ const state = {
   selected: null,   // thông tin lớp đang chọn
   model: null,      // model[weekday][session] = { on, subjects: [5] }
   dirty: false,
-  view: "timetable", // "timetable" | "stats"
-  stats: null        // trạng thái trang thống kê (khởi tạo trong stats.js)
+  view: "timetable", // "timetable" | "stats" | "db"
+  stats: null,       // trạng thái trang thống kê (khởi tạo trong stats.js)
+  db: null           // trạng thái trình quản lý dữ liệu (khởi tạo trong dbadmin.js)
 };
 
 // ---------- DOM (chỉ dùng textContent để tránh XSS) ----------
@@ -80,7 +81,7 @@ async function api(path, { method = "GET", body } = {}) {
 
 function logout(message) {
   state.token = null; state.selected = null; state.model = null; state.dirty = false;
-  state.view = "timetable"; state.stats = null;
+  state.view = "timetable"; state.stats = null; state.db = null;
   store.remove("sysadmin_token");
   if (message) toast(message, true);
   renderLogin();
@@ -211,11 +212,13 @@ function renderApp() {
   mount(
     h("div", { class: "topbar" },
       h("strong", { text: "POP AI · Admin hệ thống" }),
-      h("nav", { class: "tabs", "aria-label": "Chức năng" }, tab("timetable", "Thời khóa biểu"), tab("stats", "Thống kê")),
+      h("nav", { class: "tabs", "aria-label": "Chức năng" }, tab("timetable", "Thời khóa biểu"), tab("stats", "Thống kê"), tab("db", "Dữ liệu")),
       h("button", { class: "ghost", text: "Đăng xuất", onclick: () => { if (state.view !== "timetable" || confirmDiscard()) logout(); } })),
     state.view === "stats"
       ? h("div", { class: "stats-page" }, renderStatsView())
-      : h("div", { class: "layout" },
+      : state.view === "db"
+        ? h("div", { class: "db-page" }, renderDbView())
+        : h("div", { class: "layout" },
         h("div", { class: "side" }, renderSettings(), renderClassPicker()),
         h("div", { id: "editor" }, renderEditor())));
 }
