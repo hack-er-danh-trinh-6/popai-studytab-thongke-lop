@@ -220,12 +220,13 @@ router.post("/upload", upload.single("apk"), async (req, res, next) => {
     await client.query("BEGIN");
     // Đánh cũ hết phiên bản active trước đó (chỉ giữ một bản active mới nhất).
     await client.query("UPDATE pop_app_versions SET is_active = FALSE WHERE is_active = TRUE");
+    const id = randomUUID();
     const result = await client.query(
       `INSERT INTO pop_app_versions
-          (version, version_code, apk_file_name, apk_url, apk_size, is_active, uploaded_by)
-       VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+          (id, version, version_code, apk_file_name, apk_url, apk_size, is_active, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
        RETURNING id, version, version_code, apk_file_name, apk_url, apk_size, created_at`,
-      [versionResult.version, codeResult.versionCode, file.filename, apkUrl, file.size, uploadedBy]
+      [id, versionResult.version, codeResult.versionCode, file.filename, apkUrl, file.size, uploadedBy]
     );
     await client.query("COMMIT");
     const row = result.rows[0];

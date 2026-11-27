@@ -2,7 +2,7 @@
 -- Admin tải APK lên ở trang /updateapp, hệ thống lưu file và phiên bản.
 -- App Android gọi GET /api/mobile/v1/update/latest để so sánh phiên bản khi mở.
 CREATE TABLE IF NOT EXISTS pop_app_versions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,
   version TEXT NOT NULL UNIQUE,
   version_code INTEGER,
   apk_file_name TEXT NOT NULL,
@@ -18,5 +18,5 @@ CREATE INDEX IF NOT EXISTS pop_app_versions_active_idx
 
 -- Giới hạn kích thước file APK tối đa 200 MB để tránhslant lưu trữ.
 ALTER TABLE pop_app_versions
-  ADD CONSTRAINT IF NOT EXISTS pop_app_versions_size_check
+  ADD CONSTRAINT pop_app_versions_size_check
   CHECK (apk_size IS NULL OR apk_size <= 200 * 1024 * 1024);
