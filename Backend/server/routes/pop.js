@@ -8,6 +8,37 @@ import { loadActivityContext, loadJournalForDate, resolveTimeZone } from "../aiC
 import { requireAuth } from "../security.js";
 
 const router = Router();
+
+// Công khai: app Android gọi khi mở để kiểm tra phiên bản mới (không cần đăng nhập).
+router.get("/update/latest", async (_req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT version, version_code AS versionCode, apk_url AS apkUrl, apk_file_name AS apkFileName,
+              apk_size AS apkSize, created_at
+         FROM pop_app_versions
+        WHERE is_active = TRUE
+        ORDER BY created_at DESC
+        LIMIT 1`
+    );
+    if (result.rowCount === 0) {
+      return res.json({ latest: null });
+    }
+    const row = result.rows[0];
+    return res.json({
+      latest: {
+        version: row.version,
+        versionCode: row.versioncode,
+        apkUrl: row.apkurl,
+        apkFileName: row.apkfilename,
+        apkSize: row.apksize,
+        createdAt: row.created_at.toISOString()
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.use(requireAuth);
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

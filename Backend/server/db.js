@@ -38,7 +38,8 @@ const MIGRATIONS = [
   { version: "006_one_submission_per_phase", file: "./migrations/006_one_submission_per_phase.sql" },
   { version: "007_app_update_notifications", file: "./migrations/007_app_update_notifications.sql" },
   { version: "008_app_usage", file: "./migrations/008_app_usage.sql" },
-  { version: "009_admin_audit_log", file: "./migrations/009_admin_audit_log.sql" }
+  { version: "009_admin_audit_log", file: "./migrations/009_admin_audit_log.sql" },
+  { version: "010_app_update_files", file: "./migrations/010_app_update_files.sql" }
 ];
 
 export async function runMigrations() {

@@ -1,5 +1,6 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
+import { mkdir } from "node:fs/promises";
 import { pool, query, runMigrations } from "./db.js";
 import authRoutes from "./routes/auth.js";
 import popRoutes from "./routes/pop.js";
@@ -19,6 +20,8 @@ const adminDir = fileURLToPath(new URL("../public/admin", import.meta.url));
 const sysadminDir = fileURLToPath(new URL("../public/sysadmin", import.meta.url));
 const adminbotDir = fileURLToPath(new URL("../public/adminbot", import.meta.url));
 const updateAppDir = fileURLToPath(new URL("../public/updateapp", import.meta.url));
+const appUpdateUploadDir = fileURLToPath(new URL("../media/app-updates", import.meta.url));
+const MAX_APK_SIZE = 200 * 1024 * 1024; // 200 MB, cùng giới hạn với multer ở routes/updateapp.js
 let stopScheduler = () => {};
 let stopKeepAlive = () => {};
 let schemaReady = false;
@@ -30,6 +33,11 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: "64kb", strict: true }));
+
+// Đảm bảo thư mục lưu file APK cập nhật tồn tại trước khi nhận request.
+mkdir(appUpdateUploadDir, { recursive: true }).catch((error) => {
+  console.error("app_update_upload_dir_failed", { dir: appUpdateUploadDir, code: error?.code ?? "unknown" });
+});
 
 app.get("/", (_req, res) => res.json({ service: "POP AI API", version: "mobile/v1" }));
 app.get("/manus-routes.json", (_req, res) => res.sendFile(routeManifestPath));
@@ -47,6 +55,18 @@ app.get("/healthz", async (_req, res) => {
 app.get("/media/focus-music.mp3", (_req, res, next) => {
   res.setHeader("Cache-Control", "public, max-age=86400");
   res.sendFile("focus-music.mp3", { root: mediaDir, dotfiles: "ignore", acceptRanges: true }, (error) => {
+    if (error && !res.headersSent) next(error.code === "ENOENT" ? undefined : error);
+  });
+});
+// Phục vụ file APK cập nhật đã admin tải lên (chỉ đọc, không ghi file mới qua đường dẫn này).
+app.get("/media/app-updates/:fileName", (_req, res, next) => {
+  const { fileName } = _req.params;
+  if (!/^[A-Za-z0-9._-]+$/.test(fileName)) {
+    return res.status(400).json({ message: "Tên file không hợp lệ." });
+  }
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+  res.sendFile(fileName, { root: appUpdateUploadDir, dotfiles: "ignore", acceptRanges: true }, (error) => {
     if (error && !res.headersSent) next(error.code === "ENOENT" ? undefined : error);
   });
 });
@@ -118,6 +138,14 @@ app.use((error, req, res, _next) => {
   }
   if (error?.type === "entity.parse.failed") {
     return res.status(400).json({ message: "JSON request không hợp lệ." });
+  }
+  // Lỗi từ multer (file quá lớn, file không hợp lệ, v.v.).
+  if (error?.code && /^LIMIT|^Multer/.test(String(error.code))) {
+    const msg =
+      error.code === "LIMIT_FILE_SIZE"
+        ? `File quá lớn (tối đa ${Math.round(MAX_APK_SIZE / 1024 / 1024)} MB).`
+        : error.message || "File upload không hợp lệ.";
+    return res.status(400).json({ message: msg });
   }
   const status = Number.isInteger(error?.status) ? error.status : 500;
   console.error("request_failed", { path: req.path, status, code: error?.code ?? "application_error" });

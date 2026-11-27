@@ -16,6 +16,8 @@ local.properties
 # Node generated output
 node_modules/
 Backend/node_modules/
+package-lock.json
+Backend/package-lock.json
 
 # OS/editor
 .DS_Store

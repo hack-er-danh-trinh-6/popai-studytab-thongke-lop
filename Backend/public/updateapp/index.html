@@ -29,6 +29,18 @@
 
     <div id="panel" hidden>
       <section class="card">
+        <h2>Tải APK lên và đăng ký phiên bản</h2>
+        <p class="hint">Chọn file APK, nhập số phiên bản (ví dụ 1.4.0) và mã phiên bản (ví dụ 2). Chỉ giữ một phiên bản đang hoạt động mới nhất.</p>
+        <form id="upload-form" class="row" enctype="multipart/form-data">
+          <input id="upload-apk" type="file" accept=".apk,.aab" required>
+          <input id="upload-version" type="text" maxlength="30" placeholder="Phiên bản (ví dụ 1.4.0)" required>
+          <input id="upload-version-code" type="number" min="1" placeholder="Mã phiên bản (ví dụ 2)">
+          <button type="submit" id="upload-btn" class="primary">⬆️ Tải APK lên</button>
+        </form>
+        <p id="upload-status" class="status" hidden></p>
+      </section>
+
+      <section class="card">
         <h2>Gửi thông báo cập nhật</h2>
         <p class="hint">Gửi tới <strong id="user-count">0</strong> tài khoản học sinh. App hiện thông báo trong vài phút (30 giây khi đang mở, 15 phút khi đã đóng).</p>
         <label for="version">Số phiên bản mới (tuỳ chọn)</label>
@@ -41,6 +53,16 @@
           <button id="send" class="primary">🔔 Thông báo có bản cập nhật mới</button>
         </div>
         <p id="status" class="status" hidden></p>
+      </section>
+
+      <section class="card">
+        <h2>Phiên bản đã đăng ký</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Phiên bản</th><th>Mã</th><th>File APK</th><th class="num">Kích thước</th><th>Trạng thái</th><th class="num">Ngày tạo</th></tr></thead>
+            <tbody id="versions"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card">

@@ -120,9 +120,12 @@ File nhạc nằm ở `media/focus-music.mp3`, phục vụ có hỗ trợ `Range
 
 ## Thông báo cập nhật app (`/updateapp`)
 
-Migration `007_app_update_notifications.sql` cho phép thông báo không thuộc lớp nào (`class_id` null) và thêm cột `link_url`.
+Migration `007_app_update_notifications.sql` cho phép thông báo không thuộc lớp nào (`class_id` null) và thêm cột `link_url`. Migration `010_app_update_files.sql` thêm bảng `pop_app_versions` lưu thông tin phiên bản và file APK.
 
-- Trang web: `/updateapp`. Đăng nhập bằng `SYSTEM_ADMIN_PASSWORD` (dùng chung phiên với `/sysadmin`). Khi có bản mới, admin (tuỳ chọn nhập số phiên bản) bấm **Thông báo có bản cập nhật mới** → tạo một thông báo gửi tới mọi tài khoản học sinh, kèm lịch sử và số người đã nhận/đã đọc.
-- API (`/api/updateapp/v1`, Bearer token admin): `POST /login`, `GET /status`, `POST /send` (tối đa 5 lần/giờ).
+- **Tải APK lên:** Trang web `/updateapp` (đăng nhập bằng `SYSTEM_ADMIN_PASSWORD`) cho phép admin chọn file APK, nhập số phiên bản (ví dụ `1.4.0`) và mã phiên bản (ví dụ `2`), rồi bấm **Tải APK lên**. File được lưu tại `media/app-updates/`, chỉ giữ một phiên bản đang hoạt động mới nhất.
+- **Kiểm tra từ app:** `GET /api/mobile/v1/update/latest` (công khai, không cần đăng nhập) trả phiên bản mới nhất đang hoạt động. App Android gọi endpoint này khi mở, so sánh với `BuildConfig.VERSION_NAME` / `BuildConfig.VERSION_CODE`; nếu khác → hiện popup cập nhật và thông báo đẩy cục bộ. Nhấn "Cập nhật" sẽ mở trình duyệt tải APK từ `/media/app-updates/<file>`.
+- **Gửi thông báo:** `POST /api/updateapp/v1/send` (tối đa 5 lần/giờ) tạo thông báo broadcast tới mọi học sinh, kèm liên kết mở App Hub khi nhấn.
+- API (`/api/updateapp/v1`, Bearer token admin): `POST /login`, `GET /status` (kèm danh sách phiên bản), `POST /send`, `POST /upload`, `GET /versions`.
 - Liên kết mở khi nhấn thông báo mặc định `https://apphub-pop.onrender.com`; đổi bằng biến môi trường `APP_HUB_URL` (chỉ nhận `https://`). Liên kết do server quyết định, không nhận từ trình duyệt.
 - App Android: `GET /notifications` và `/notifications/deliver` trả thêm `linkUrl`; nhấn thông báo điện thoại (hoặc nút "Mở App Hub để cập nhật" trong hộp thư) sẽ mở trình duyệt tới liên kết đó.
+- Biến môi trường mới: `APP_UPDATE_UPLOAD_DIR` (tuỳ chọn, mặc định `media/app-updates`) thư mục lưu file APK tải lên.
