@@ -88,6 +88,18 @@ router.get("/latest", async (_req, res, next) => {
   }
 });
 
+// === Đăng nhập không yêu cầu token cũ; các route quản trị bên dưới mới yêu cầu token ===
+router.post("/login", loginLimiter, (req, res) => {
+  const password = process.env.SYSTEM_ADMIN_PASSWORD;
+  if (!password) return res.status(503).json({ message: NOT_CONFIGURED });
+  const supplied = req.body?.password;
+  if (typeof supplied !== "string" || supplied.length > 200 || !safeEqualText(supplied, password)) {
+    return res.status(401).json({ message: "Mật khẩu admin không đúng." });
+  }
+  const { token, expiresAt } = issueAdminToken(password, tokenOptions());
+  return res.json({ token, expiresAt: new Date(expiresAt).toISOString() });
+});
+
 // === Quản trị: tất cả route sau yêu cầu đăng nhập admin hệ thống ===
 function requireAdmin(req, res, next) {
   const password = process.env.SYSTEM_ADMIN_PASSWORD;
@@ -99,17 +111,6 @@ function requireAdmin(req, res, next) {
   return next();
 }
 router.use(requireAdmin);
-
-router.post("/login", loginLimiter, (req, res) => {
-  const password = process.env.SYSTEM_ADMIN_PASSWORD;
-  if (!password) return res.status(503).json({ message: NOT_CONFIGURED });
-  const supplied = req.body?.password;
-  if (typeof supplied !== "string" || supplied.length > 200 || !safeEqualText(supplied, password)) {
-    return res.status(401).json({ message: "Mật khẩu admin không đúng." });
-  }
-  const { token, expiresAt } = issueAdminToken(password, tokenOptions());
-  return res.json({ token, expiresAt: new Date(expiresAt).toISOString() });
-});
 
 router.get("/status", async (_req, res, next) => {
   try {
